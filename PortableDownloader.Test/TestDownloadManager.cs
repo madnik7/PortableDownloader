@@ -170,7 +170,7 @@ namespace PortableDownloader.Test
         public async Task Test_Downloader_Start_NoResume()
         {
             using var mem1 = new MemoryStream(1000000);
-            var uri = new Uri("https://raw.githubusercontent.com/madnik7/Downloader/master/README.md");
+            var uri = new Uri("https://raw.githubusercontent.com/madnik7/PortableDownloader/master/README.md");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false, AllowResuming = false });
 
             // start downloading by downloader
