@@ -316,6 +316,8 @@ namespace PortableDownloader
             Save();
         }
 
+        public bool IsIdle => Items.All(x => x.IsIdle);
+
         public void Dispose()
         {
             Save();

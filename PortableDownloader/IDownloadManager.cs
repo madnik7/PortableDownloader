@@ -11,6 +11,7 @@ namespace PortableDownloader
         void Stop(string path = null);
         void Cancel(string path = null);
         DownloadManagerItem[] Items { get; }
+        bool IsIdle { get; }
         DownloadManagerItem[] GetItems(string path = null);
         DownloadManagerItem GetItem(string path = null);
 

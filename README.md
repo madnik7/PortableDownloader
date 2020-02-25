@@ -16,12 +16,11 @@ Example for usage:
 Start or resuming max 3 downloads simultaneously, each download with 4 parts
 
 ```C#
-
 // Create a portable storage
 using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
 
 // Create a portable download manager
-var dmOptions = new PortableDownloader.DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 3 };
+var dmOptions = new PortableDownloader.DownloadManagerOptions() { Storage = storage };
 using var dm = new PortableDownloader.DownloadManager(dmOptions);
 
 dm.Add("file1.zip", new Uri("https://abcd.com/file1.zip"));
@@ -31,9 +30,8 @@ dm.Add("folder/file4.zip", new Uri("https://abcd.com/file4.zip"));
 dm.Add("folder/file5.zip", new Uri("https://abcd.com/file5.zip"));
 
 // wait for downloads
-while (dm.GetItems().Any(x => x.DownloadState == DownloadState.Started || x.DownloadState == DownloadState.Pending))
+while (!dm.IsIdle)
     Thread.Sleep(500);
 
 // done
-
 ```
