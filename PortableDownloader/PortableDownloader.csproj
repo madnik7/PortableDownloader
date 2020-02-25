@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Authors>Mohammad Nikravan</Authors>
+    <Version>1.0.0</Version>
+    <RootNamespace>PortableDownloader</RootNamespace>
+    <AssemblyName>PortableDownloader</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="PortableStorage" Version="1.2.58" />
+  </ItemGroup>
+
+</Project>
