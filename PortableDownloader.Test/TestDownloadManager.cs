@@ -25,7 +25,7 @@ namespace PortableDownloader.Test
 
         private void WaitForAllDownloads(DownloadManager downloadManager)
         {
-            while (downloadManager.GetItems().Any(x => x.IsWorking))
+            while (!downloadManager.IsIdle)
                 Thread.Sleep(500);
         }
 
@@ -45,7 +45,7 @@ namespace PortableDownloader.Test
             dm.Add("folder/file5.zip", new Uri("https://abcd.com/file5.zip"));
 
             // wait for downloads
-            while (dm.GetItems().Any(x => x.DownloadState == DownloadState.Downloading || x.DownloadState == DownloadState.Pending))
+            while (!dm.IsIdle)
                 Thread.Sleep(500);
 
             // done
@@ -80,7 +80,7 @@ namespace PortableDownloader.Test
                 dm.Stop("file3");
 
                 // check number of started item
-                Assert.AreEqual(2, dm.GetItems().Count(x => x.IsWorking), "invalid number of started items");
+                Assert.AreEqual(2, dm.Items.Count(x => !x.IsIdle), "invalid number of started items");
                 WaitForAllDownloads(dm);
 
                 // check for errors
@@ -120,7 +120,7 @@ namespace PortableDownloader.Test
                 Assert.AreEqual(0, dm.GetItems().Count(x => x.DownloadState == DownloadState.Pending), "invalid number of pending items");
 
                 dm.Start("folder1/file2");
-                Assert.AreEqual(1, dm.GetItems().Count(x => x.IsWorking), "invalid number of pending items");
+                Assert.AreEqual(1, dm.GetItems().Count(x => !x.IsIdle), "invalid number of pending items");
             }
 
             // restore downloads after restart

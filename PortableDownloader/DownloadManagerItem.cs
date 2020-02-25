@@ -11,6 +11,6 @@ namespace PortableDownloader
         public DownloadState DownloadState { get; set; } = DownloadState.None;
         public Uri RemoteUri { get; set; }
         public string ErrorMessage { get; set; }
-        public bool IsWorking => DownloadState == DownloadState.Pending || DownloadState == DownloadState.Initializing || DownloadState == DownloadState.Downloading;
+        public bool IsIdle => DownloadState == DownloadState.None || DownloadState == DownloadState.Initialized || DownloadState == DownloadState.Error || DownloadState == DownloadState.Finished;
     }
 }
