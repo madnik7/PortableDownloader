@@ -12,7 +12,12 @@ The library based on .NET Standard 2.0
 * Each download is segemented
 * Cross-Platform
 
-Example for usage:
+### Nuget
+```
+Install-Package PortableDownloader
+```
+
+### Usage
 Start or resuming max 3 downloads simultaneously, each download with 4 parts
 
 ```C#
