@@ -119,17 +119,13 @@ namespace PortableDownloader
                     else if (startMode == StartMode.Start)
                     {
                         newItem.DownloadState = DownloadState.Pending;
-                        System.Diagnostics.Debug.WriteLine("******try to get");
                         var downloadController = GetOrCreateDownloadController(path, remoteUri);
-                        System.Diagnostics.Debug.WriteLine("starting");
                         StartContoller(downloadController);
                     }
 
                 }
                 catch (Exception err)
                 {
-                    System.Diagnostics.Debug.WriteLine("Error!");
-
                     newItem.DownloadState = DownloadState.Error;
                     newItem.ErrorMessage = err.Message;
                 }
@@ -270,7 +266,7 @@ namespace PortableDownloader
                 RemoteUri = items.Count() == 1 ? items.FirstOrDefault().RemoteUri : null,
             };
 
-            if (items.Any(x => x.DownloadState == DownloadState.Pending || x.DownloadState == DownloadState.Downloading))
+            if (items.Any(x => !x.IsIdle))
                 ret.DownloadState = DownloadState.Downloading;
             else if (items.Any(x => x.DownloadState == DownloadState.Error))
                 ret.DownloadState = DownloadState.Error;

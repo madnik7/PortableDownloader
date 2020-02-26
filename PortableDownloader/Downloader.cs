@@ -20,6 +20,12 @@ namespace PortableDownloader
             public int Count;
         }
 
+        public static bool IsIdleState(DownloadState downloadState) =>
+            downloadState == DownloadState.None ||
+            downloadState == DownloadState.Initialized ||
+            downloadState == DownloadState.Error ||
+            downloadState == DownloadState.Finished;
+
         public event EventHandler DataReceived;
         public event EventHandler RangeDownloaded;
         public event EventHandler DownloadStateChanged;
@@ -137,14 +143,17 @@ namespace PortableDownloader
 
                  // report error
                  _cancellationTokenSource.Cancel(); // cancel all other parts
-                 DownloadState = DownloadState.Error;
+                 SetLastError(LastException);
              }, MaxPartCount, _cancellationTokenSource.Token);
 
             // finish if there is no error
             if (AutoDisposeStream)
                 _stream?.Dispose();
 
-            if (DownloadState != DownloadState.Error)
+            // finish it
+            if (DownloadState == DownloadState.Error)
+                throw LastException;
+            else
                 DownloadState = DownloadState.Finished;
         }
 
@@ -159,8 +168,7 @@ namespace PortableDownloader
                 var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, Uri));
                 if (response.StatusCode != HttpStatusCode.OK)
                 {
-                    DownloadState = DownloadState.Error;
-                    LastException = new Exception($"StatusCode is {response.StatusCode}");
+                    SetLastError(new Exception($"StatusCode is {response.StatusCode}"));
                     throw LastException;
                 }
                 IsResumingSupported = AllowResuming ? response.Headers.AcceptRanges.Contains("bytes") : false;
