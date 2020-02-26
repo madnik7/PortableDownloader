@@ -88,8 +88,9 @@ namespace PortableDownloader
 
         protected void SetLastError(Exception ex)
         {
+            Debug.WriteLine($"Error: {ex}");
+            LastException = ex; //make sure called before setting DownloadState to raise LastException in change events
             DownloadState = DownloadState.Error;
-            LastException = ex;
         }
 
         public void Stop()
@@ -173,6 +174,11 @@ namespace PortableDownloader
                 }
                 IsResumingSupported = AllowResuming ? response.Headers.AcceptRanges.Contains("bytes") : false;
                 TotalSize = response.Content.Headers.ContentLength ?? 0;
+                if (TotalSize == 0)
+                {
+                    SetLastError(new Exception($"Could not retrieve the stream size: {Uri}"));
+                    throw LastException;
+                }
                 DownloadState = DownloadState.Initialized;
             }
         }

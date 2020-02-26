@@ -12,6 +12,6 @@ namespace PortableDownloader
         public int PartSize { get; set; } = 500 * 1000;
         public int MaxRetryCount { get; set; }
         public bool AutoDisposeStream { get; set; } = true;
-        public bool AllowResuming { get; set; }
+        public bool AllowResuming { get; set; } = true;
     }
 }

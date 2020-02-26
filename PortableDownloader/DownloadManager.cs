@@ -216,6 +216,7 @@ namespace PortableDownloader
                     item.Value.BytesPerSecond = downloadController.BytesPerSecond;
                     item.Value.CurrentSize = downloadController.CurrentSize;
                     item.Value.TotalSize = downloadController.TotalSize;
+                    item.Value.ErrorMessage = downloadController.LastException?.Message;
                     // item.Value.DownloadState = downloadController.DownloadState; // don't get DownloadState here to let Download controller finish its own job
                 }
             }
