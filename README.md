@@ -2,17 +2,20 @@ Portable Downloader Manager
 ==========
 
 A library for resuming and multi-part/multi-threaded downloads in .NET written in C#
-Advanced Portable Download Manager with simple usage
+Advanced Portable Download Manager with simple usage.
 
 The library based on .NET Standard 2.0
 
 ### Features
 * Resume downloads after restart the manager
-* Recusively can start or stop all downloads in a folder
+* Recusively start or stop all downloads in a folder
 * Each download is segemented
 * Cross-Platform
 
-Example for usage:
+### Nuget
+https://www.nuget.org/packages/PortableDownloader/
+
+### Usage
 Start or resuming max 3 downloads simultaneously, each download with 4 parts
 
 ```C#
