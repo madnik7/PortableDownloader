@@ -8,9 +8,11 @@ The library based on .NET Standard 2.0
 
 ### Features
 * Resume downloads after restart the manager
-* Recusively start or stop all downloads in a folder
 * Each download is segemented
 * Cross-Platform
+
+### Limitation
+At the moment the server should report the stream size
 
 ### Nuget
 https://www.nuget.org/packages/PortableDownloader/

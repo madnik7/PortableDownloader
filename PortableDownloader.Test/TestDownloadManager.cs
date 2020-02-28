@@ -141,7 +141,7 @@ namespace PortableDownloader.Test
         [TestMethod]
         public async Task Test_Downloader_Start()
         {
-            using var mem1 = new MemoryStream(1000000);
+            using var mem1 = new MemoryStream(500000);
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false });
 
@@ -151,7 +151,7 @@ namespace PortableDownloader.Test
             var downloaderTask = downloader.Start();
 
             // start downloading by simple http client download
-            using var mem2 = new MemoryStream(1000000);
+            using var mem2 = new MemoryStream(500000);
             using var httpClient = new HttpClient();
             var httpClientTask = httpClient.GetStreamAsync(uri);
             (await httpClientTask).CopyTo(mem2);
@@ -169,7 +169,7 @@ namespace PortableDownloader.Test
         [TestMethod]
         public async Task Test_Downloader_Start_NoResume()
         {
-            using var mem1 = new MemoryStream(1000000);
+            using var mem1 = new MemoryStream();
             var uri = new Uri("https://raw.githubusercontent.com/madnik7/PortableDownloader/master/README.md");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false, AllowResuming = false });
 
@@ -177,7 +177,7 @@ namespace PortableDownloader.Test
             var downloaderTask = downloader.Start();
 
             // start downloading by simple http client download
-            using var mem2 = new MemoryStream(1000000);
+            using var mem2 = new MemoryStream();
             using var httpClient = new HttpClient();
             var httpClientTask = httpClient.GetStreamAsync(uri);
             (await httpClientTask).CopyTo(mem2);
@@ -233,8 +233,8 @@ namespace PortableDownloader.Test
                 // check the number of added items
                 dm.Start("folder1");
                 WaitForAllDownloads(dm);
-                Assert.AreEqual(2, dm.GetItems().Count(x => x.DownloadState == DownloadState.None), "invalid number of item with none state");
-                Assert.AreEqual(3, dm.GetItems().Count(x => x.DownloadState == DownloadState.Finished), "invalid number of item with finish state");
+                Assert.AreEqual(2, dm.Items.Count(x => x.DownloadState == DownloadState.None), "invalid number of item with none state");
+                Assert.AreEqual(3, dm.Items.Count(x => x.DownloadState == DownloadState.Finished), "invalid number of item with finish state");
             }
 
             Assert.IsTrue(storage.EntryExists($"folder1/file1"), "item has not been downloaded!");

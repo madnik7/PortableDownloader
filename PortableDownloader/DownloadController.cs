@@ -45,6 +45,9 @@ namespace PortableDownloader
             var stream = _storage.EntryExists(_downloadingStreamPath)
                 ? _storage.OpenStream(_downloadingStreamPath, StreamMode.Open, StreamAccess.ReadWrite, StreamShare.Read)
                 : _storage.CreateStream(_downloadingStreamPath, StreamShare.None);
+            if (!_storage.EntryExists(_downloadingStreamPath))
+                return stream;
+
             return stream;
         }
 

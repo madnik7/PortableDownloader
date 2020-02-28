@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="PortableStorage" Version="1.2.58" />
+    <PackageReference Include="PortableStorage" Version="1.2.59" />
   </ItemGroup>
 
 </Project>
