@@ -145,8 +145,7 @@ namespace PortableDownloader
             {
                 Uri = remoteUri,
                 Storage = _storage,
-                DownloadingStreamPath = GetDownloadingPath(path),
-                DownloadingInfoStreamPath = GetDownloadingInfoPath(path),
+                DownloadPath = path,
                 IsStopped = isStopped
 
             });
@@ -165,14 +164,6 @@ namespace PortableDownloader
 
         private void DownloadController_DownloadStateChanged(object sender, EventArgs e)
         {
-            var downloadController = (DownloadController)sender;
-            //var item = GetItems(downloadController.Path).FirstOrDefault();
-            //if (item != null)
-            //{
-            //    item.DownloadState = downloadController.DownloadState; // The state need be changed here to let controller finish its own job
-            //    item.IsStarted = downloadController.IsStarted;
-            //}
-
             CheckQueue();
             Save();
         }

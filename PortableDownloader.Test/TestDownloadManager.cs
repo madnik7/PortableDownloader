@@ -31,11 +31,12 @@ namespace PortableDownloader.Test
             }
         }
 
-        public void ForReadME()
+        public void ForReadME1()
         {
+
             using var downloader = new Downloader(new DownloaderOptions()
-            { 
-                Uri = new Uri("https://abcd.com/file1.zip"), 
+            {
+                Uri = new Uri("https://abcd.com/file1.zip"),
                 Stream = File.OpenWrite(@"c:\temp\file1.zip")
             });
 
@@ -46,14 +47,36 @@ namespace PortableDownloader.Test
 
             while (downloader.IsStarted)
                 Thread.Sleep(500);
+        }
 
+        public void ForReadME2()
+        {
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
+            var downloadController = DownloadController.Create(new DownloadControllerOptions()
+            {
+                Uri = new Uri("https://abcd.com/file1.zip"),
+                Storage = storage,
+                DownloadPath = "file1"
+            });
 
+            downloadController.Start().ContinueWith(x =>
+            {
+                Console.WriteLine("Single File Downloaded!");
+            });
+
+            while (downloadController.IsStarted)
+                Thread.Sleep(500);
+
+        }
+
+        public void ForReadME3()
+        {
             // Create a portable storage
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
 
             // Create a portable download manager
-            var dmOptions = new PortableDownloader.DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 3 };
-            using var dm = new PortableDownloader.DownloadManager(dmOptions);
+            var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 3 };
+            using var dm = new DownloadManager(dmOptions);
 
             dm.Add("file1.zip", new Uri("https://abcd.com/file1.zip"));
             dm.Add("file2.zip", new Uri("https://abcd.com/file2.zip"));
@@ -133,7 +156,7 @@ namespace PortableDownloader.Test
             {
                 Assert.AreEqual(3, dm.Items.Length, 3, "Invalid number of added items");
                 Assert.AreEqual(1, dm.Items.Count(x => x.DownloadState == DownloadState.Finished), "invalid number of finished items");
-                Assert.AreEqual(2, dm.Items.Count(x => x.DownloadState== DownloadState.Stopped), "invalid number of not started items");
+                Assert.AreEqual(2, dm.Items.Count(x => x.DownloadState == DownloadState.Stopped), "invalid number of not started items");
 
                 dm.Start("folder1/file2");
                 Assert.AreEqual(1, dm.Items.Count(x => x.IsStarted), "invalid number of started items");
@@ -171,7 +194,7 @@ namespace PortableDownloader.Test
                 await task;
                 Assert.Fail("OperationCanceledException was expected!");
             }
-            catch (OperationCanceledException) {}
+            catch (OperationCanceledException) { }
 
             Assert.AreEqual(DownloadState.Stopped, downloader.DownloadState);
         }

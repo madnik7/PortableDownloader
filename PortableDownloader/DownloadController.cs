@@ -5,7 +5,7 @@ using System.IO;
 
 namespace PortableDownloader
 {
-    class DownloadController : Downloader
+    public class DownloadController : Downloader
     {
         class DownloadData
         {
@@ -13,15 +13,19 @@ namespace PortableDownloader
             public DownloadRange[] DownloadedRanges { get; set; }
         }
 
-        private readonly string _downloadingStreamPath;
-        private readonly string _downloadingInfoStreamPath;
+        private readonly string _downloadingPath;
+        private readonly string _downloadingInfoPath;
         private readonly Storage _storage;
-        public string Path { get; }
+        public string DownloadPath { get; }
 
         public static DownloadController Create(DownloadControllerOptions options)
         {
             var downloadData = Load(options);
-            options.Uri = options.Uri ?? downloadData.Uri ?? throw new ArgumentNullException("Could not find RemoteUri!");
+            options.DownloadPath = options.DownloadPath ?? throw new ArgumentNullException("DownloadPath");
+            options.DownloadingPath = options.DownloadingPath ?? options.DownloadPath + options.DownloadingExtension;
+            options.DownloadingInfoPath = options.DownloadingInfoPath ?? options.DownloadPath + options.DownloadingInfoExtension;
+            options.Uri = options.Uri ?? downloadData.Uri ?? throw new ArgumentNullException("RemoteUri!");
+            options.DownloadingInfoPath = options.DownloadingInfoPath ?? options.DownloadPath + options.DownloadingInfoExtension;
             var ret = new DownloadController(options, downloadData);
             if (!options.IsStopped)
                 ret.Init().GetAwaiter();
@@ -31,10 +35,10 @@ namespace PortableDownloader
         private DownloadController(DownloadControllerOptions options, DownloadData downloadData)
             : base(new DownloaderOptions() { Uri = options.Uri, DownloadedRanges = downloadData.DownloadedRanges, AutoDisposeStream = true, IsStopped = options.IsStopped })
         {
-            _downloadingStreamPath = options.DownloadingStreamPath;
-            _downloadingInfoStreamPath = options.DownloadingInfoStreamPath;
+            DownloadPath = options.DownloadPath;
+            _downloadingInfoPath = options.DownloadingInfoPath;
+            _downloadingPath = options.DownloadingPath;
             _storage = options.Storage;
-            Path = Storage.PathCombine(System.IO.Path.GetDirectoryName(options.DownloadingStreamPath), System.IO.Path.GetFileNameWithoutExtension(options.DownloadingStreamPath));
 
             // create download
             RangeDownloaded += Downloader_RangeDownloaded;
@@ -44,10 +48,10 @@ namespace PortableDownloader
         protected override Stream OpenStream()
         {
             // open or create stream
-            var stream = _storage.EntryExists(_downloadingStreamPath)
-                ? _storage.OpenStream(_downloadingStreamPath, StreamMode.Open, StreamAccess.ReadWrite, StreamShare.Read)
-                : _storage.CreateStream(_downloadingStreamPath, StreamShare.None);
-            if (!_storage.EntryExists(_downloadingStreamPath))
+            var stream = _storage.EntryExists(_downloadingPath)
+                ? _storage.OpenStream(_downloadingPath, StreamMode.Open, StreamAccess.ReadWrite, StreamShare.Read)
+                : _storage.CreateStream(_downloadingPath, StreamShare.None);
+            if (!_storage.EntryExists(_downloadingPath))
                 return stream;
 
             return stream;
@@ -67,26 +71,25 @@ namespace PortableDownloader
             //rename the temp downloading file
             try
             {
-                if (_storage.StreamExists(Path))
-                    _storage.DeleteStream(Path);
+                if (_storage.StreamExists(DownloadPath))
+                    _storage.DeleteStream(DownloadPath);
             }
             catch { }
 
             // rename stream
             try
             {
-                _storage.Rename(_downloadingStreamPath, System.IO.Path.GetFileName(Path));
+                _storage.Rename(_downloadingPath, Path.GetFileNameWithoutExtension(_downloadingPath));
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Error in renaming stream: {Path}, Error: {ex.Message}");
                 SetLastError(ex);
             }
 
             //remove info file
             try
             {
-                _storage.DeleteStream(_downloadingInfoStreamPath);
+                _storage.DeleteStream(_downloadingInfoPath);
             }
             catch { }
         }
@@ -96,7 +99,7 @@ namespace PortableDownloader
         {
             try
             {
-                var json = options.Storage.ReadAllText(options.DownloadingInfoStreamPath);
+                var json = options.Storage.ReadAllText(options.DownloadingInfoPath);
                 return JsonConvert.DeserializeObject<DownloadData>(json);
             }
             catch
@@ -114,7 +117,7 @@ namespace PortableDownloader
                 Uri = Uri
             };
             var json = JsonConvert.SerializeObject(data);
-            _storage.WriteAllText(_downloadingInfoStreamPath, json);
+            _storage.WriteAllText(_downloadingInfoPath, json);
         }
     }
 }

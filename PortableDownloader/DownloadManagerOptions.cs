@@ -9,8 +9,8 @@ namespace PortableDownloader
     {
         public Storage Storage { get; set; }
         public string DataPath { get; set; } = ".downloadlist.json";
-        public string DownloadingInfoExtension { get; set; } = ".downloading_info";
-        public string DownloadingExtension { get; set; } = ".downloading";
+        public string DownloadingInfoExtension { get; set; }
+        public string DownloadingExtension { get; set; }
         public int MaxOfSimultaneousDownloads { get; set; } = 3;
     }
 }

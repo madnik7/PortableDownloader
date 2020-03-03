@@ -17,7 +17,7 @@ At the moment the server should report the stream size
 ### Nuget
 https://www.nuget.org/packages/PortableDownloader/
 
-### Usage For Single Download
+### Single Download Usage
 ```C#
 using var downloader = new Downloader(new DownloaderOptions()
 { 
@@ -36,7 +36,7 @@ while (downloader.IsStarted)
 ```
 
 
-### Usage For Download Manager
+### Download Manager Usage
 Start or resuming max 3 downloads simultaneously, each download with 4 parts
 
 ```C#
@@ -44,8 +44,8 @@ Start or resuming max 3 downloads simultaneously, each download with 4 parts
 using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
 
 // Create a portable download manager
-var dmOptions = new PortableDownloader.DownloadManagerOptions() { Storage = storage };
-using var dm = new PortableDownloader.DownloadManager(dmOptions);
+var dmOptions = new DownloadManagerOptions() { Storage = storage };
+using var dm = new DownloadManager(dmOptions);
 
 dm.Add("file1.zip", new Uri("https://abcd.com/file1.zip"));
 dm.Add("file2.zip", new Uri("https://abcd.com/file2.zip"));

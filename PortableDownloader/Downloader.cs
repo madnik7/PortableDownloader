@@ -253,6 +253,8 @@ namespace PortableDownloader
         {
 
             _cancellationTokenSource = new CancellationTokenSource();
+            var cancellationToken = _cancellationTokenSource.Token;
+
             Exception exRoot = null;
 
             //download all remaiing parts
@@ -265,9 +267,9 @@ namespace PortableDownloader
                      try
                      {
                          if (IsResumingSupported)
-                             await DownloadPart(range, _cancellationTokenSource.Token);
+                             await DownloadPart(range, cancellationToken);
                          else
-                             await DownloadAll(_cancellationTokenSource.Token);
+                             await DownloadAll(cancellationToken);
 
                          exRoot = null;
                          return; // finished
@@ -443,6 +445,7 @@ namespace PortableDownloader
             lock (_monitor)
             {
                 _cancellationTokenSource?.Cancel();
+                _cancellationTokenSource?.Dispose();
                 if (AutoDisposeStream)
                     _stream?.Dispose();
             }
