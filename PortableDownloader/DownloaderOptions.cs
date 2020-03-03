@@ -13,5 +13,6 @@ namespace PortableDownloader
         public int MaxRetryCount { get; set; }
         public bool AutoDisposeStream { get; set; } = true;
         public bool AllowResuming { get; set; } = true;
+        public bool IsStopped { get; set; }
     }
 }

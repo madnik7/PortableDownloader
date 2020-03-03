@@ -21,13 +21,15 @@ namespace PortableDownloader
         public static DownloadController Create(DownloadControllerOptions options)
         {
             var downloadData = Load(options);
-            options.Uri = options.Uri ?? downloadData.Uri ?? throw new ArgumentNullException("Could not find RemoteUri");
-            return new DownloadController(options, downloadData);
-
+            options.Uri = options.Uri ?? downloadData.Uri ?? throw new ArgumentNullException("Could not find RemoteUri!");
+            var ret = new DownloadController(options, downloadData);
+            if (options.AutoInitialize)
+                ret.Init().GetAwaiter();
+            return ret;
         }
 
         private DownloadController(DownloadControllerOptions options, DownloadData downloadData)
-            : base(new DownloaderOptions() { Uri = options.Uri, DownloadedRanges = downloadData.DownloadedRanges, AutoDisposeStream = true })
+            : base(new DownloaderOptions() { Uri = options.Uri, DownloadedRanges = downloadData.DownloadedRanges, AutoDisposeStream = true, IsStopped = !options.AutoInitialize })
         {
             _downloadingStreamPath = options.DownloadingStreamPath;
             _downloadingInfoStreamPath = options.DownloadingInfoStreamPath;

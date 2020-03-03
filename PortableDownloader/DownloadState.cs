@@ -9,9 +9,9 @@ namespace PortableDownloader
         None,
         Initializing,
         Initialized,
-        Pending, // not used by downloader
         Downloading,
         Finished,
+        Stopped,
         Error
     }
 }

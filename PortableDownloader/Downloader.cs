@@ -23,6 +23,7 @@ namespace PortableDownloader
         public static bool IsIdleState(DownloadState downloadState) =>
             downloadState == DownloadState.None ||
             downloadState == DownloadState.Initialized ||
+            downloadState == DownloadState.Stopped ||
             downloadState == DownloadState.Error ||
             downloadState == DownloadState.Finished;
 
@@ -36,6 +37,7 @@ namespace PortableDownloader
         private readonly ConcurrentQueue<SpeedData> _speedMonitor = new ConcurrentQueue<SpeedData>();
         private long _currentDownloadingSize;
         private DownloadState _state = DownloadState.None;
+        public bool IsStarted { get; private set; }
 
         public int BytesPerSecond
         {
@@ -54,7 +56,6 @@ namespace PortableDownloader
         public int MaxPartCount { get; set; }
         public int PartSize { get; private set; }
         public long CurrentSize => DownloadedRanges.Where(x => x.IsDone).Sum(x => x.To) + _currentDownloadingSize; // current downloading range + dowloaded chunk
-
         public bool AutoDisposeStream { get; }
         public bool AllowResuming { get; }
         public int MaxRetyCount { get; set; }
@@ -70,24 +71,39 @@ namespace PortableDownloader
             MaxPartCount = options.MaxPartCount;
             MaxRetyCount = options.MaxRetryCount;
             PartSize = options.PartSize;
-            DownloadState = DownloadState.None;
+            DownloadState = options.IsStopped ? DownloadState.Stopped : DownloadState.None;
             AutoDisposeStream = options.AutoDisposeStream;
             AllowResuming = options.AllowResuming;
         }
 
+        private readonly object _monitorState = new object();
         public DownloadState DownloadState
         {
-            get => _state; private set
+            get
             {
-                if (value == _state)
-                    return;
-                _state = value;
+                lock (_monitorState)
+                    return _state;
+            }
+            private set
+            {
+                lock (_monitorState)
+                {
+                    if (value == _state)
+                        return;
+                    _state = value;
+                }
                 DownloadStateChanged?.Invoke(this, new EventArgs());
             }
         }
 
         protected void SetLastError(Exception ex)
         {
+            if (ex is OperationCanceledException)
+            {
+                DownloadState = DownloadState.Stopped;
+                return;
+            }
+
             Debug.WriteLine($"Error: {ex}");
             LastException = ex; //make sure called before setting DownloadState to raise LastException in change events
             DownloadState = DownloadState.Error;
@@ -95,25 +111,57 @@ namespace PortableDownloader
 
         public void Stop()
         {
-            if (DownloadState == DownloadState.Finished)
+            if (DownloadState == DownloadState.Finished || DownloadState == DownloadState.Error)
                 return;
 
-            if (_cancellationTokenSource != null)
-                _cancellationTokenSource.Cancel();
-
-            DownloadState = DownloadState.None;
+            _cancellationTokenSource?.Cancel();
         }
 
-        public async Task Init()
-        {
-            if (DownloadState != DownloadState.None)
-                return;
+        private TaskCompletionSource<object> _initTask;
 
+        public Task Init()
+        {
+            lock (_monitorState)
+            {
+                if (_initTask != null)
+                    return _initTask.Task;
+
+                switch (DownloadState)
+                {
+                    case DownloadState.Initializing:
+                    case DownloadState.Initialized:
+                    case DownloadState.Downloading:
+                    case DownloadState.Finished:
+                        return Task.FromResult(0);
+                }
+
+                _initTask = new TaskCompletionSource<object>();
+                _state = DownloadState.Initializing;
+            }
+
+            DownloadStateChanged?.Invoke(this, new EventArgs());
+            return InitImpl();
+
+        }
+
+        public async Task InitImpl()
+        {
             _cancellationTokenSource = new CancellationTokenSource();
 
             try
             {
-                DownloadState = DownloadState.Initializing;
+                //make sure stream is created
+                GetStream();
+
+                // try recover from old data
+                if (DownloadedRanges.Length > 0)
+                {
+                    TotalSize = DownloadedRanges.Sum(x => x.From + x.To + 1);
+                    DownloadState = DownloadState.Initialized;
+                    return;
+                }
+
+                // download the header
                 using (var httpClient = new HttpClient())
                 {
                     var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, Uri), _cancellationTokenSource.Token);
@@ -128,40 +176,90 @@ namespace PortableDownloader
                     {
                         SetLastError(new Exception($"Could not retrieve the stream size: {Uri}"));
                         throw LastException;
+
                     }
+
+                    // create download range)
+                    if (DownloadedRanges.Length == 0)
+                        DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported ? PartSize : TotalSize);
+
+                    // finish initializing
                     DownloadState = DownloadState.Initialized;
                 }
             }
             catch (Exception ex)
             {
                 SetLastError(ex);
+                throw;
             }
             finally
             {
                 _cancellationTokenSource.Dispose();
                 _cancellationTokenSource = null;
+                _initTask.SetResult(null);
+                _initTask = null;
             }
         }
 
         public async Task Start()
         {
-            if (DownloadState == DownloadState.None)
+            try
+            {
+                lock (_monitorState)
+                {
+                    if (IsStarted || DownloadState == DownloadState.Downloading || DownloadState == DownloadState.Finished)
+                        return;
+
+                    IsStarted = true;
+                }
+
+                // init
                 await Init();
 
-            if (DownloadState != DownloadState.Initialized)
-                return; // error
+                // Check point
+                if (DownloadState != DownloadState.Initialized)
+                    return; //error
 
-            // create download range)
-            if (DownloadedRanges.Length == 0)
-                DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported ? PartSize : TotalSize);
+                DownloadState = DownloadState.Downloading;
 
-            DownloadState = DownloadState.Downloading;
+                await StartImpl();
+
+                // finish if there is no error
+                if (AutoDisposeStream)
+                {
+                    _stream?.Dispose();
+                    _stream = null;
+                }
+
+                // finish it
+                if (DownloadState == DownloadState.Error)
+                    throw LastException;
+                else
+                    DownloadState = DownloadState.Finished;
+
+            }
+            catch (Exception ex)
+            {
+                SetLastError(ex);
+                throw;
+            }
+            finally
+            {
+                IsStarted = false;
+            }
+        }
+
+        private async Task StartImpl()
+        {
+
             _cancellationTokenSource = new CancellationTokenSource();
+            Exception exRoot = null;
 
             //download all remaiing parts
             var ranges = DownloadedRanges.Where(x => !x.IsDone);
             await ForEachAsync(ranges, async range =>
              {
+                 Exception ex2 = null;
                  for (var i = 0; i < MaxRetyCount + 1 && !_cancellationTokenSource.IsCancellationRequested; i++) // retry
                  {
                      try
@@ -171,37 +269,37 @@ namespace PortableDownloader
                          else
                              await DownloadAll(_cancellationTokenSource.Token);
 
+                         exRoot = null;
                          return; // finished
                      }
                      catch (Exception ex)
                      {
-                         LastException = ex;
+                         ex2 = ex;
                      }
                  }
 
-                 // report error
-                 _cancellationTokenSource.Cancel(); // cancel all other parts
-                 SetLastError(LastException);
+                 // just first exception treated as the exception; next exceptions such as CancelOperationException should be ignored
+                 lock (_monitor)
+                 {
+                     if (exRoot == null)
+                         exRoot = ex2;
+
+                     // cancel other jobs
+                     _cancellationTokenSource.Cancel(); // cancel all other parts
+                 }
+
              }, MaxPartCount, _cancellationTokenSource.Token);
 
             // release _cancellationTokenSource
             _cancellationTokenSource.Dispose();
             _cancellationTokenSource = null;
 
-            // finish if there is no error
-            if (AutoDisposeStream)
-                _stream?.Dispose();
-
-            // finish it
-            if (DownloadState == DownloadState.Error)
-                throw LastException;
-            else
-                DownloadState = DownloadState.Finished;
+            if (exRoot != null)
+                throw exRoot;
         }
 
         private async Task DownloadAll(CancellationToken cancellationToken)
         {
-
             using (var httpClient = new HttpClient())
             {
                 var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, Uri), cancellationToken);
@@ -249,6 +347,9 @@ namespace PortableDownloader
                     // copy part to file
                     lock (_monitor)
                     {
+                        if (cancellationToken.IsCancellationRequested)
+                            throw new OperationCanceledException();
+
                         downloadedStream.Position = 0;
                         GetStream().Position = downloadRange.From;
                         downloadedStream.CopyTo(GetStream());
@@ -339,9 +440,12 @@ namespace PortableDownloader
 
         public void Dispose()
         {
-            if (AutoDisposeStream)
-                _stream?.Dispose();
-            _cancellationTokenSource?.Dispose();
+            lock (_monitor)
+            {
+                _cancellationTokenSource?.Cancel();
+                if (AutoDisposeStream)
+                    _stream?.Dispose();
+            }
         }
     }
 }

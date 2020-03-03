@@ -9,9 +9,11 @@ namespace PortableDownloader
         public long CurrentSize { get; set; }
         public long TotalSize { get; set; }
         public DownloadState DownloadState { get; set; } = DownloadState.None;
+        public bool IsStarted { get; set; }
+        public bool IsWaiting => !IsStarted && (DownloadState == DownloadState.None || DownloadState == DownloadState.Initialized);
+        public bool IsIdle => !IsStarted && Downloader.IsIdleState(DownloadState);
         public Uri RemoteUri { get; set; }
         public string ErrorMessage { get; set; }
-        public bool IsIdle => Downloader.IsIdleState(DownloadState);
 
         
     }

@@ -11,5 +11,6 @@ namespace PortableDownloader
         public Storage Storage { get; set; }
         public string DownloadingStreamPath { get; set; }
         public string DownloadingInfoStreamPath { get; set; }
+        public bool AutoInitialize { get; set; }
     }
 }

@@ -38,7 +38,7 @@ namespace PortableDownloader
             set
             {
                 _maxOfSimultaneousDownloads = value;
-                CheckQuene();
+                CheckQueue();
             }
         }
 
@@ -67,8 +67,8 @@ namespace PortableDownloader
                 {
                     _items.TryAdd(item.Path, item);
                     var startMode = StartMode.None;
-                    if (item.DownloadState == DownloadState.Pending) startMode = StartMode.AddToQueue;
-                    if (item.DownloadState == DownloadState.Downloading || item.DownloadState == DownloadState.Initializing) startMode = StartMode.Start;
+                    if (item.DownloadState == DownloadState.None || item.DownloadState == DownloadState.Initializing || item.DownloadState == DownloadState.Initialized || item.DownloadState == DownloadState.Error) startMode = StartMode.AddToQueue;
+                    if (item.DownloadState == DownloadState.Downloading) startMode = StartMode.Start;
                     AddImpl(item.Path, item.RemoteUri, startMode);
                 }
             }
@@ -83,7 +83,7 @@ namespace PortableDownloader
             {
                 var data = new DownloadManagerData
                 {
-                    Items = GetItems()
+                    Items = Items
                 };
                 _storage.WriteAllText(_dataPath, JsonConvert.SerializeObject(data));
             }
@@ -92,7 +92,7 @@ namespace PortableDownloader
         public void Add(string path, Uri remoteUri, bool startByQueue = true)
         {
             AddImpl(path, remoteUri, startByQueue ? StartMode.AddToQueue : StartMode.None);
-            CheckQuene();
+            CheckQueue();
             Save();
         }
 
@@ -109,20 +109,11 @@ namespace PortableDownloader
             {
                 try
                 {
-                    // set pending queue
-                    if (startMode == StartMode.AddToQueue)
-                    {
-                        if (newItem.DownloadState == DownloadState.None)
-                            newItem.DownloadState = DownloadState.Pending;
-                        CheckQuene();
-                    }
-                    else if (startMode == StartMode.Start)
-                    {
-                        newItem.DownloadState = DownloadState.Pending;
-                        var downloadController = GetOrCreateDownloadController(path, remoteUri);
+                    var downloadController = GetOrCreateDownloadController(path, remoteUri, resume: true,  isStopped: startMode==StartMode.None);
+                    if (startMode == StartMode.Start)
                         StartContoller(downloadController);
-                    }
-
+                    else 
+                        CheckQueue();
                 }
                 catch (Exception err)
                 {
@@ -132,7 +123,7 @@ namespace PortableDownloader
             }
         }
 
-        private DownloadController GetOrCreateDownloadController(string path, Uri remoteUri, bool resume = true)
+        private DownloadController GetOrCreateDownloadController(string path, Uri remoteUri, bool resume, bool isStopped)
         {
             var start = false;
 
@@ -155,13 +146,15 @@ namespace PortableDownloader
                 Uri = remoteUri,
                 Storage = _storage,
                 DownloadingStreamPath = GetDownloadingPath(path),
-                DownloadingInfoStreamPath = GetDownloadingInfoPath(path)
+                DownloadingInfoStreamPath = GetDownloadingInfoPath(path),
+                AutoInitialize = !isStopped
 
             });
             newDownloadController.DownloadStateChanged += DownloadController_DownloadStateChanged;
             _downloadControllers.TryAdd(path, newDownloadController);
             if (start)
                 StartContoller(newDownloadController);
+
             return newDownloadController;
         }
 
@@ -173,11 +166,14 @@ namespace PortableDownloader
         private void DownloadController_DownloadStateChanged(object sender, EventArgs e)
         {
             var downloadController = (DownloadController)sender;
-            var item = GetItems(downloadController.Path).FirstOrDefault();
-            if (item != null)
-                item.DownloadState = downloadController.DownloadState; // The state need be changed here to let controller finish its own job
+            //var item = GetItems(downloadController.Path).FirstOrDefault();
+            //if (item != null)
+            //{
+            //    item.DownloadState = downloadController.DownloadState; // The state need be changed here to let controller finish its own job
+            //    item.IsStarted = downloadController.IsStarted;
+            //}
 
-            CheckQuene();
+            CheckQueue();
             Save();
         }
 
@@ -217,24 +213,20 @@ namespace PortableDownloader
                     item.Value.CurrentSize = downloadController.CurrentSize;
                     item.Value.TotalSize = downloadController.TotalSize;
                     item.Value.ErrorMessage = downloadController.LastException?.Message;
-                    // item.Value.DownloadState = downloadController.DownloadState; // don't get DownloadState here to let Download controller finish its own job
+                    item.Value.IsStarted = downloadController.IsStarted;
+                    item.Value.DownloadState = downloadController.DownloadState;
                 }
             }
         }
 
-        private void CheckQuene()
+        private void CheckQueue()
         {
-            // stop extra downloads
-            var startedItems = GetItems().Where(x => x.DownloadState == DownloadState.Downloading || x.DownloadState == DownloadState.Initializing).ToArray();
-            var pendingItems = GetItems().Where(x => x.DownloadState == DownloadState.Pending).ToArray();
-
-            // stop extra downloads
-            //for (var i = MaxOfSimultaneousDownloads; i < startedItems.Count(); i++)
-            //    Stop(startedItems[i].Path);
+            var startedItems = Items.Where(x => x.IsStarted).ToArray();
+            var waitingItems = Items.Where(x => x.IsWaiting).ToArray();
 
             //start new downloads
-            for (var i = 0; i < pendingItems.Count() && i < MaxOfSimultaneousDownloads - startedItems.Count(); i++)
-                Start(pendingItems[i].Path);
+            for (var i = 0; i < waitingItems.Count() && i < MaxOfSimultaneousDownloads - startedItems.Count(); i++)
+                Start(waitingItems[i].Path);
         }
 
         public DownloadManagerItem[] Items => GetItems(null);
@@ -265,6 +257,7 @@ namespace PortableDownloader
                 Path = path,
                 ErrorMessage = items.FirstOrDefault(x => x.DownloadState == DownloadState.Error)?.ErrorMessage,
                 RemoteUri = items.Count() == 1 ? items.FirstOrDefault().RemoteUri : null,
+                IsStarted = items.Any(x => x.IsStarted)
             };
 
             if (items.Any(x => !x.IsIdle))
@@ -281,8 +274,7 @@ namespace PortableDownloader
         public void Start(string path = null)
         {
             // get all items in path
-            var items = GetItems(path).Where(x => x.DownloadState != DownloadState.Downloading);
-            foreach (var item in items)
+            foreach (var item in GetItems(path))
             {
                 AddImpl(item.Path, item.RemoteUri, StartMode.Start);
                 Save();
@@ -291,19 +283,14 @@ namespace PortableDownloader
 
         public void Stop(string path = null)
         {
-            var pendingItems = GetItems(path).Where(x => x.DownloadState == DownloadState.Pending);
-            foreach (var item in pendingItems)
-                item.DownloadState = DownloadState.None;
-
-            var startedItems = GetItems(path).Where(x => x.DownloadState == DownloadState.Pending);
-            foreach (var item in startedItems)
+            foreach (var item in GetItems(path))
                 if (_downloadControllers.TryGetValue(item.Path, out DownloadController downloadController))
                     downloadController.Stop();
         }
 
         public void RemoveFinishedItems()
         {
-            var items = GetItems().Where(x => x.DownloadState == DownloadState.Finished);
+            var items = Items.Where(x => x.DownloadState == DownloadState.Finished);
             foreach (var item in items)
             {
                 _items.TryRemove(item.Path, out _);
