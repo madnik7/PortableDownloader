@@ -23,6 +23,12 @@ namespace PortableDownloader
             Start
         }
 
+        public bool AllowResuming { get; private set; }
+        public int MaxPartCount { get; private set; }
+        public int PartSize { get; private set; }
+        public int MaxRetryCount { get; private set; }
+
+
         private readonly object _monitor = new object();
         private readonly Storage _storage;
         private readonly string _dataPath;
@@ -54,6 +60,11 @@ namespace PortableDownloader
             _downloadingExtension = options.DownloadingExtension;
             _downloadingInfoExtension = options.DownloadingInfoExtension;
             _maxOfSimultaneousDownloads = options.MaxOfSimultaneousDownloads;
+            AllowResuming = options.AllowResuming;
+            MaxPartCount = options.MaxPartCount;
+            PartSize = options.PartSize;
+            MaxRetryCount = options.MaxRetryCount;
+
             Load(options.DataPath);
         }
 
@@ -146,7 +157,11 @@ namespace PortableDownloader
                 Uri = remoteUri,
                 Storage = _storage,
                 DownloadPath = path,
-                IsStopped = isStopped
+                IsStopped = isStopped,
+                AllowResuming = AllowResuming,
+                MaxPartCount = MaxPartCount,
+                PartSize = PartSize,
+                MaxRetryCount = MaxRetryCount,
 
             });
             newDownloadController.DownloadStateChanged += DownloadController_DownloadStateChanged;

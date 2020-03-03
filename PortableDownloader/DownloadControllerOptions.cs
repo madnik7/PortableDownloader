@@ -11,6 +11,10 @@ namespace PortableDownloader
         public Storage Storage { get; set; }
         public string DownloadPath { get; set; }
         public bool IsStopped { get; set; }
+        public int MaxPartCount { get; set; } = 4;
+        public int PartSize { get; set; } = 500 * 1000;
+        public int MaxRetryCount { get; set; }
+        public bool AllowResuming { get; set; } = true;
         public string DownloadingInfoExtension { get; set; } = ".downloading_info";
         public string DownloadingExtension { get; set; } = ".downloading";
         internal string DownloadingInfoPath { get; set; }

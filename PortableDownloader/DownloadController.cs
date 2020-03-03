@@ -33,7 +33,16 @@ namespace PortableDownloader
         }
 
         private DownloadController(DownloadControllerOptions options, DownloadData downloadData)
-            : base(new DownloaderOptions() { Uri = options.Uri, DownloadedRanges = downloadData.DownloadedRanges, AutoDisposeStream = true, IsStopped = options.IsStopped })
+            : base(new DownloaderOptions() { 
+                Uri = options.Uri, 
+                DownloadedRanges = downloadData.DownloadedRanges, 
+                AutoDisposeStream = true, 
+                IsStopped = options.IsStopped,
+                AllowResuming = options.AllowResuming,
+                MaxPartCount = options.MaxPartCount,
+                MaxRetryCount = options.MaxRetryCount,
+                PartSize = options.PartSize
+            })
         {
             DownloadPath = options.DownloadPath;
             _downloadingInfoPath = options.DownloadingInfoPath;
