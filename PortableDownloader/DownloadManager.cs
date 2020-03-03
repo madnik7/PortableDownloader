@@ -147,7 +147,7 @@ namespace PortableDownloader
                 Storage = _storage,
                 DownloadingStreamPath = GetDownloadingPath(path),
                 DownloadingInfoStreamPath = GetDownloadingInfoPath(path),
-                AutoInitialize = !isStopped
+                IsStopped = isStopped
 
             });
             newDownloadController.DownloadStateChanged += DownloadController_DownloadStateChanged;

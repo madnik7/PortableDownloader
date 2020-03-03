@@ -31,8 +31,23 @@ namespace PortableDownloader.Test
             }
         }
 
-        void ForReadME()
+        public void ForReadME()
         {
+            using var downloader = new Downloader(new DownloaderOptions()
+            { 
+                Uri = new Uri("https://abcd.com/file1.zip"), 
+                Stream = File.OpenWrite(@"c:\temp\file1.zip")
+            });
+
+            downloader.Start().ContinueWith(x =>
+            {
+                Console.WriteLine("Single File Downloaded!");
+            });
+
+            while (downloader.IsStarted)
+                Thread.Sleep(500);
+
+
             // Create a portable storage
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
 

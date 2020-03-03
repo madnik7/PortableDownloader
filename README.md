@@ -17,7 +17,26 @@ At the moment the server should report the stream size
 ### Nuget
 https://www.nuget.org/packages/PortableDownloader/
 
-### Usage
+### Usage For Single Download
+```C#
+using var downloader = new Downloader(new DownloaderOptions()
+{ 
+    Uri = new Uri("https://abcd.com/file1.zip"), 
+    Stream = File.OpenWrite(@"c:\temp\file1.zip")
+});
+
+downloader.Start().ContinueWith(x =>
+{
+    Console.WriteLine("Single File is Downloaded!");
+});
+
+while (downloader.IsStarted)
+    Thread.Sleep(500);
+
+```
+
+
+### Usage For Download Manager
 Start or resuming max 3 downloads simultaneously, each download with 4 parts
 
 ```C#
