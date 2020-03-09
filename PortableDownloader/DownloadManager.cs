@@ -116,21 +116,30 @@ namespace PortableDownloader
                 _items.TryAdd(path, newItem);
             }
 
-            if (newItem.DownloadState != DownloadState.Finished)
+            // restart finished item if it does not exists
+            if (newItem.DownloadState == DownloadState.Finished)
             {
-                try
-                {
-                    var downloadController = GetOrCreateDownloadController(path, remoteUri, resume: true,  isStopped: startMode==StartMode.None);
-                    if (startMode == StartMode.Start)
-                        StartContoller(downloadController);
-                    else 
-                        CheckQueue();
-                }
-                catch (Exception err)
-                {
-                    newItem.DownloadState = DownloadState.Error;
-                    newItem.ErrorMessage = err.Message;
-                }
+                if (_storage.StreamExists(path))
+                    return;
+
+                _downloadControllers.TryRemove(newItem.Path, out _);
+                newItem.DownloadState = DownloadState.None;
+            }
+
+
+            // start
+            try
+            {
+                var downloadController = GetOrCreateDownloadController(path, remoteUri, resume: true, isStopped: startMode == StartMode.None);
+                if (startMode == StartMode.Start)
+                    StartContoller(downloadController);
+                else
+                    CheckQueue();
+            }
+            catch (Exception err)
+            {
+                newItem.DownloadState = DownloadState.Error;
+                newItem.ErrorMessage = err.Message;
             }
         }
 

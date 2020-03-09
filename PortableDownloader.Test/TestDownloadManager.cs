@@ -172,6 +172,25 @@ namespace PortableDownloader.Test
         }
 
 
+        [TestMethod]
+        public void Test_Download_must_start_if_finished_file_doesnot_exist()
+        {
+            var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
+
+            var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
+            var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 100 };
+            using var dm = new DownloadManager(dmOptions);
+            dm.Add("file1", uri);
+            WaitForAllDownloads(dm);
+
+            storage.DeleteStream("file1");
+
+            dm.Add("file1", uri);
+            WaitForAllDownloads(dm);
+            Assert.IsTrue(storage.StreamExists("file1"));
+        }
+
         static bool StreamEquals(Stream stream1, Stream stream2)
         {
             using var md5 = MD5.Create();
