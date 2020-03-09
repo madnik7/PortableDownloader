@@ -133,6 +133,11 @@ namespace PortableDownloader
                 var downloadController = GetOrCreateDownloadController(path, remoteUri, resume: true, isStopped: startMode == StartMode.None);
                 if (startMode == StartMode.Start)
                     StartContoller(downloadController);
+
+                // restart if it is stopped or in error state
+                if (startMode == StartMode.AddToQueue &&
+                    (downloadController.DownloadState == DownloadState.Stopped || downloadController.DownloadState == DownloadState.Stopped || downloadController.DownloadState == DownloadState.Error))
+                    downloadController.Init();
                 else
                     CheckQueue();
             }
@@ -145,8 +150,6 @@ namespace PortableDownloader
 
         private DownloadController GetOrCreateDownloadController(string path, Uri remoteUri, bool resume, bool isStopped)
         {
-            var start = false;
-
             //delete if not in resume mode
             if (!resume)
             {
@@ -155,8 +158,6 @@ namespace PortableDownloader
             //return if it is in progress
             else if (_downloadControllers.TryGetValue(path, out DownloadController downloadController))
             {
-                if (start)
-                    StartContoller(downloadController);
                 return downloadController;
             }
 
@@ -175,8 +176,6 @@ namespace PortableDownloader
             });
             newDownloadController.DownloadStateChanged += DownloadController_DownloadStateChanged;
             _downloadControllers.TryAdd(path, newDownloadController);
-            if (start)
-                StartContoller(newDownloadController);
 
             return newDownloadController;
         }

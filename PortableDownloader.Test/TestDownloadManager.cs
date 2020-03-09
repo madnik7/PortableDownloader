@@ -196,8 +196,13 @@ namespace PortableDownloader.Test
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
 
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
-            var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 100 };
+            var dmOptions = new DownloadManagerOptions() { Storage = storage};
             using var dm = new DownloadManager(dmOptions);
+
+            dm.Add("file1", uri, false);
+            dm.Add("file1", uri, true);
+            Assert.IsFalse(dm.IsIdle, "dowload is not started after second add");
+            
             dm.Add("file1", uri);
             WaitForAllDownloads(dm);
 
@@ -207,6 +212,7 @@ namespace PortableDownloader.Test
             WaitForAllDownloads(dm);
             Assert.IsTrue(storage.StreamExists("file1"));
         }
+
 
         static bool StreamEquals(Stream stream1, Stream stream2)
         {
