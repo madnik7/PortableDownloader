@@ -172,6 +172,23 @@ namespace PortableDownloader.Test
         }
 
 
+        //[TestMethod]
+        public void Test_Foo()
+        {
+            var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
+
+            var uri = new Uri("bgfile");
+            var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 100 };
+            using var dm = new DownloadManager(dmOptions);
+            dm.Add("file1", uri);
+            dm.Start("file1");
+            WaitForAllDownloads(dm);
+
+            Assert.IsTrue(storage.EntryExists("file1"));
+
+        }
+
         [TestMethod]
         public void Test_Download_must_start_if_finished_file_doesnot_exist()
         {

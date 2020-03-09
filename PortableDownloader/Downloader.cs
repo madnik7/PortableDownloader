@@ -304,7 +304,7 @@ namespace PortableDownloader
         {
             using (var httpClient = new HttpClient())
             {
-                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, Uri), cancellationToken);
+                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, Uri), HttpCompletionOption.ResponseHeadersRead, cancellationToken);
                 using (var stream = await response.Content.ReadAsStreamAsync())
                 {
                     // download to downloadedStream

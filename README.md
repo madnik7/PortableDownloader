@@ -75,6 +75,4 @@ Start or resuming max 3 downloads simultaneously, each download with 4 parts
 	// wait for downloads
 	while (!dm.IsIdle)
 		Thread.Sleep(500);
-
-	// done
 ```
