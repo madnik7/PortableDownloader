@@ -78,7 +78,7 @@ namespace PortableDownloader
                 {
                     _items.TryAdd(item.Path, item);
                     var startMode = StartMode.None;
-                    if (item.DownloadState == DownloadState.None || item.DownloadState == DownloadState.Initializing || item.DownloadState == DownloadState.Initialized || item.DownloadState == DownloadState.Error) startMode = StartMode.AddToQueue;
+                    if (item.IsStarted) startMode = StartMode.AddToQueue;
                     if (item.DownloadState == DownloadState.Downloading) startMode = StartMode.Start;
                     AddImpl(item.Path, item.RemoteUri, startMode);
                 }
