@@ -79,7 +79,7 @@ namespace PortableDownloader
                     _items.TryAdd(item.Path, item);
                     var startMode = StartMode.None;
                     if (item.IsStarted) startMode = StartMode.AddToQueue;
-                    if (item.DownloadState == DownloadState.Downloading) startMode = StartMode.Start;
+                    if (item.State == DownloadState.Downloading) startMode = StartMode.Start;
                     AddImpl(item.Path, item.RemoteUri, startMode);
                 }
             }
@@ -117,13 +117,13 @@ namespace PortableDownloader
             }
 
             // restart finished item if it does not exists
-            if (newItem.DownloadState == DownloadState.Finished)
+            if (newItem.State == DownloadState.Finished)
             {
                 if (_storage.StreamExists(path))
                     return;
 
                 _downloadControllers.TryRemove(newItem.Path, out _);
-                newItem.DownloadState = DownloadState.None;
+                newItem.State = DownloadState.None;
             }
 
 
@@ -143,7 +143,7 @@ namespace PortableDownloader
             }
             catch (Exception err)
             {
-                newItem.DownloadState = DownloadState.Error;
+                newItem.State = DownloadState.Error;
                 newItem.ErrorMessage = err.Message;
             }
         }
@@ -228,7 +228,7 @@ namespace PortableDownloader
                     item.Value.TotalSize = downloadController.TotalSize;
                     item.Value.ErrorMessage = downloadController.LastException?.Message;
                     item.Value.IsStarted = downloadController.IsStarted;
-                    item.Value.DownloadState = downloadController.DownloadState;
+                    item.Value.State = downloadController.DownloadState;
                 }
             }
         }
@@ -267,19 +267,19 @@ namespace PortableDownloader
                 BytesPerSecond = items.Sum(x => x.BytesPerSecond),
                 CurrentSize = items.Sum(x => x.CurrentSize),
                 TotalSize = items.Sum(x => x.TotalSize),
-                DownloadState = DownloadState.None,
+                State = DownloadState.None,
                 Path = path,
-                ErrorMessage = items.FirstOrDefault(x => x.DownloadState == DownloadState.Error)?.ErrorMessage,
+                ErrorMessage = items.FirstOrDefault(x => x.State == DownloadState.Error)?.ErrorMessage,
                 RemoteUri = items.Count() == 1 ? items.FirstOrDefault().RemoteUri : null,
                 IsStarted = items.Any(x => x.IsStarted)
             };
 
             if (items.Any(x => !x.IsIdle))
-                ret.DownloadState = DownloadState.Downloading;
-            else if (items.Any(x => x.DownloadState == DownloadState.Error))
-                ret.DownloadState = DownloadState.Error;
-            else if (items.All(x => x.DownloadState == DownloadState.Finished))
-                ret.DownloadState = DownloadState.Finished;
+                ret.State = DownloadState.Downloading;
+            else if (items.Any(x => x.State == DownloadState.Error))
+                ret.State = DownloadState.Error;
+            else if (items.All(x => x.State == DownloadState.Finished))
+                ret.State = DownloadState.Finished;
 
             return ret;
         }
@@ -304,7 +304,7 @@ namespace PortableDownloader
 
         public void RemoveFinishedItems()
         {
-            var items = Items.Where(x => x.DownloadState == DownloadState.Finished);
+            var items = Items.Where(x => x.State == DownloadState.Finished);
             foreach (var item in items)
             {
                 _items.TryRemove(item.Path, out _);

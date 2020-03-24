@@ -112,7 +112,7 @@ namespace PortableDownloader.Test
                 // check the number of added items
                 Assert.AreEqual(6, dm.Items.Length, "Invalid number of added items");
                 Assert.AreEqual(6, dm.GetItems("/").Length, "Invalid number of added items");
-                Assert.IsTrue(dm.Items.All(x => x.DownloadState == DownloadState.Stopped), "all items but has been in none state");
+                Assert.IsTrue(dm.Items.All(x => x.State == DownloadState.Stopped), "all items but has been in none state");
 
                 // start downloading
                 dm.Start("file1");
@@ -124,12 +124,12 @@ namespace PortableDownloader.Test
                 WaitForAllDownloads(dm);
 
                 // check for errors
-                Assert.IsFalse(dm.Items.Any(x => x.DownloadState == DownloadState.Error), "there is an error in downloads");
+                Assert.IsFalse(dm.Items.Any(x => x.State == DownloadState.Error), "there is an error in downloads");
 
                 // check for downloaded stream
                 Assert.IsTrue(storage.EntryExists("file1"));
                 Assert.IsTrue(storage.EntryExists("folder1/file1"));
-                Assert.AreEqual(2, dm.Items.Count(x => x.DownloadState == DownloadState.Finished), "2 items must has been finished");
+                Assert.AreEqual(2, dm.Items.Count(x => x.State == DownloadState.Finished), "2 items must has been finished");
 
                 // check remote finished items
                 dm.RemoveFinishedItems();
@@ -145,7 +145,7 @@ namespace PortableDownloader.Test
                 WaitForAllDownloads(dm);
 
                 // check cancel result
-                Assert.AreEqual(1, dm.Items.Count(x => x.DownloadState == DownloadState.Finished), "2 items must be finished");
+                Assert.AreEqual(1, dm.Items.Count(x => x.State == DownloadState.Finished), "2 items must be finished");
                 Assert.IsTrue(storage.EntryExists("file3"));
                 Assert.IsFalse(storage.EntryExists($"folder1/file3{dmOptions.DownloadingExtension}"), "item hasn't deleted");
                 Assert.IsFalse(storage.EntryExists($"folder1/file3{dmOptions.DownloadingInfoExtension}"), "item hasn't deleted");
@@ -155,8 +155,8 @@ namespace PortableDownloader.Test
             using (var dm = new DownloadManager(dmOptions))
             {
                 Assert.AreEqual(3, dm.Items.Length, 3, "Invalid number of added items");
-                Assert.AreEqual(1, dm.Items.Count(x => x.DownloadState == DownloadState.Finished), "invalid number of finished items");
-                Assert.AreEqual(2, dm.Items.Count(x => x.DownloadState == DownloadState.Stopped), "invalid number of not started items");
+                Assert.AreEqual(1, dm.Items.Count(x => x.State == DownloadState.Finished), "invalid number of finished items");
+                Assert.AreEqual(2, dm.Items.Count(x => x.State == DownloadState.Stopped), "invalid number of not started items");
 
                 dm.Start("folder1/file2");
                 Assert.AreEqual(1, dm.Items.Count(x => x.IsStarted), "invalid number of started items");
@@ -342,8 +342,8 @@ namespace PortableDownloader.Test
                 Assert.AreEqual(3, dm.Items.Count(x => x.IsStarted));
 
                 WaitForAllDownloads(dm);
-                Assert.AreEqual(2, dm.Items.Count(x => x.DownloadState == DownloadState.Stopped), "invalid number of item with none state");
-                Assert.AreEqual(3, dm.Items.Count(x => x.DownloadState == DownloadState.Finished), "invalid number of item with finish state");
+                Assert.AreEqual(2, dm.Items.Count(x => x.State == DownloadState.Stopped), "invalid number of item with none state");
+                Assert.AreEqual(3, dm.Items.Count(x => x.State == DownloadState.Finished), "invalid number of item with finish state");
             }
 
             Assert.IsTrue(storage.EntryExists($"folder1/file1"), "item has not been downloaded!");
