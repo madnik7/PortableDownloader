@@ -44,7 +44,8 @@ namespace PortableDownloader
             get
             {
                 var curTotalSeconds = TimeSpan.FromTicks(DateTime.Now.Ticks).TotalSeconds;
-                return _speedMonitor.Where(x => x.Seconds > curTotalSeconds - 5).Sum(x => x.Count);
+                var threshold = 5;
+                return _speedMonitor.Where(x => x.Seconds > curTotalSeconds - threshold).Sum(x => x.Count) / threshold;
             }
         }
 
