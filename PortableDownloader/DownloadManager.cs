@@ -32,10 +32,10 @@ namespace PortableDownloader
         private readonly object _monitor = new object();
         private readonly Storage _storage;
         private readonly string _dataPath;
-        private readonly string _downloadingExtension;
-        private readonly string _downloadingInfoExtension;
         private readonly ConcurrentDictionary<string, DownloadController> _downloadControllers = new ConcurrentDictionary<string, DownloadController>();
         private readonly ConcurrentDictionary<string, DownloadManagerItem> _items = new ConcurrentDictionary<string, DownloadManagerItem>();
+        public string DownloadingExtension { get; }
+        public string DownloadingInfoExtension { get; }
 
         private int _maxOfSimultaneousDownloads;
         public int MaxOfSimultaneousDownloads
@@ -48,8 +48,8 @@ namespace PortableDownloader
             }
         }
 
-        private string GetDownloadingPath(string path) => path + _downloadingExtension;
-        private string GetDownloadingInfoPath(string path) => path + _downloadingInfoExtension;
+        private string GetDownloadingPath(string path) => path + DownloadingExtension;
+        private string GetDownloadingInfoPath(string path) => path + DownloadingInfoExtension;
 
         public DownloadManager(DownloadManagerOptions options)
         {
@@ -57,8 +57,8 @@ namespace PortableDownloader
                 new ArgumentNullException("Storage");
             _storage = options.Storage;
             _dataPath = options.DataPath;
-            _downloadingExtension = options.DownloadingExtension;
-            _downloadingInfoExtension = options.DownloadingInfoExtension;
+            DownloadingExtension = options.DownloadingExtension ?? new DownloadControllerOptions().DownloadingExtension;
+            DownloadingInfoExtension = options.DownloadingInfoExtension ?? new DownloadControllerOptions().DownloadingInfoExtension;
             _maxOfSimultaneousDownloads = options.MaxOfSimultaneousDownloads;
             AllowResuming = options.AllowResuming;
             MaxPartCount = options.MaxPartCount;
@@ -315,6 +315,12 @@ namespace PortableDownloader
         }
 
         public bool IsIdle => Items.All(x => x.IsIdle);
+
+        public bool IsDownloadingStream(string path)
+        {
+            var ext = Path.GetExtension(path);
+            return ext == DownloadingExtension || ext == DownloadingInfoExtension;
+        }
 
         public void Dispose()
         {
