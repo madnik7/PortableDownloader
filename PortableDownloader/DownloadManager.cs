@@ -109,6 +109,9 @@ namespace PortableDownloader
 
         private void AddImpl(string path, Uri remoteUri, StartMode startMode)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (path.Length == 0 || path[0] != Storage.SeparatorChar) throw new ArgumentException($"{nameof(path)} should start with {Storage.SeparatorChar}");
+
             //add to list if it is not already exists
             if (!_items.TryGetValue(path, out DownloadManagerItem newItem))
             {
@@ -280,6 +283,8 @@ namespace PortableDownloader
                 ret.State = DownloadState.Error;
             else if (items.All(x => x.State == DownloadState.Finished))
                 ret.State = DownloadState.Finished;
+            else if (items.All(x => x.State == DownloadState.Stopped))
+                ret.State = DownloadState.Stopped;
 
             return ret;
         }

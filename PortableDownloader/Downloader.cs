@@ -56,7 +56,7 @@ namespace PortableDownloader
         public bool IsResumingSupported { get; private set; }
         public int MaxPartCount { get; set; }
         public int PartSize { get; private set; }
-        public long CurrentSize => DownloadedRanges.Where(x => x.IsDone).Sum(x => x.To) + _currentDownloadingSize; // current downloading range + dowloaded chunk
+        public long CurrentSize => DownloadedRanges.Where(x => x.IsDone).Sum(x => x.To - x.From + 1) + _currentDownloadingSize; // current downloading range + dowloaded chunk
         public bool AutoDisposeStream { get; }
         public bool AllowResuming { get; }
         public int MaxRetyCount { get; set; }
