@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace PortableDownloader
 {
@@ -8,7 +9,7 @@ namespace PortableDownloader
     {
         void Add(string path, Uri remoteUrl, bool startByQueue = true);
         void Start(string path = null);
-        void Stop(string path = null);
+        Task Stop(string path = null);
         void Cancel(string path = null);
         DownloadManagerItem[] Items { get; }
         bool IsIdle { get; }

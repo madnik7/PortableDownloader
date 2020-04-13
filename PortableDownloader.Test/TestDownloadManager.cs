@@ -226,10 +226,10 @@ namespace PortableDownloader.Test
             using var mem1 = new MemoryStream();
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false });
-            Assert.AreEqual(DownloadState.None, downloader.DownloadState, "state should be none before start");
+            Assert.AreEqual(DownloadState.None, downloader.State, "state should be none before start");
 
             var task = downloader.Start();
-            downloader.Stop();
+            downloader.Stop().GetAwaiter();
 
             try
             {
@@ -238,7 +238,7 @@ namespace PortableDownloader.Test
             }
             catch (OperationCanceledException) { }
 
-            Assert.AreEqual(DownloadState.Stopped, downloader.DownloadState);
+            Assert.AreEqual(DownloadState.Stopped, downloader.State);
         }
 
 
@@ -249,7 +249,7 @@ namespace PortableDownloader.Test
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false });
 
-            Assert.AreEqual(DownloadState.None, downloader.DownloadState, "state should be none before start");
+            Assert.AreEqual(DownloadState.None, downloader.State, "state should be none before start");
 
             // start downloading by downloader
             var downloaderTask = downloader.Start();
@@ -261,7 +261,7 @@ namespace PortableDownloader.Test
             (await httpClientTask).CopyTo(mem2);
 
             await Task.WhenAll(downloaderTask, httpClientTask);
-            Assert.AreEqual(DownloadState.Finished, downloader.DownloadState, "state should be finished after start");
+            Assert.AreEqual(DownloadState.Finished, downloader.State, "state should be finished after start");
 
             // compare two stream
             mem1.Position = 0;
@@ -288,7 +288,7 @@ namespace PortableDownloader.Test
 
             await Task.WhenAll(downloaderTask, httpClientTask);
             Assert.IsFalse(downloader.IsResumingSupported, "the test link should not support resuming");
-            Assert.AreEqual(DownloadState.Finished, downloader.DownloadState, "state should be finished after start");
+            Assert.AreEqual(DownloadState.Finished, downloader.State, "state should be finished after start");
 
             // compare two stream
             mem1.Position = 0;
@@ -313,7 +313,7 @@ namespace PortableDownloader.Test
             catch { }
 
             // start downloading by simple download
-            Assert.AreEqual(DownloadState.Error, downloader.DownloadState, "state should be error after start");
+            Assert.AreEqual(DownloadState.Error, downloader.State, "state should be error after start");
         }
 
 

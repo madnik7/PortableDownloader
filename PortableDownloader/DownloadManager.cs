@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace PortableDownloader
 {
@@ -110,7 +111,7 @@ namespace PortableDownloader
         private void AddImpl(string path, Uri remoteUri, StartMode startMode)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
-            if (path.Length == 0 || path[0] != Storage.SeparatorChar) throw new ArgumentException($"{nameof(path)} should start with {Storage.SeparatorChar}");
+            path = ValidatePath(path);
 
             //add to list if it is not already exists
             if (!_items.TryGetValue(path, out DownloadManagerItem newItem))
@@ -139,8 +140,8 @@ namespace PortableDownloader
 
                 // restart if it is stopped or in error state
                 if (startMode == StartMode.AddToQueue &&
-                    (downloadController.DownloadState == DownloadState.Stopped || downloadController.DownloadState == DownloadState.Stopped || downloadController.DownloadState == DownloadState.Error))
-                    downloadController.Init();
+                    (downloadController.State == DownloadState.Stopped || downloadController.State == DownloadState.Stopped || downloadController.State == DownloadState.Error))
+                    downloadController.Init().GetAwaiter();
                 else
                     CheckQueue();
             }
@@ -231,7 +232,7 @@ namespace PortableDownloader
                     item.Value.TotalSize = downloadController.TotalSize;
                     item.Value.ErrorMessage = downloadController.LastException?.Message;
                     item.Value.IsStarted = downloadController.IsStarted;
-                    item.Value.State = downloadController.DownloadState;
+                    item.Value.State = downloadController.State;
                 }
             }
         }
@@ -250,10 +251,12 @@ namespace PortableDownloader
 
         public DownloadManagerItem[] GetItems(string path = null)
         {
+            path = ValidatePath(path);
+
             UpdateItems();
 
             // return all for root request
-            if (string.IsNullOrEmpty(path) || path == "/")
+            if (path == Storage.SeparatorChar.ToString())
                 return _items.Select(x => x.Value).ToArray();
 
             // return only itelsef and items belong to sub storages
@@ -264,34 +267,42 @@ namespace PortableDownloader
 
         public DownloadManagerItem GetItem(string path = null)
         {
+            path = ValidatePath(path);
+
             var items = GetItems(path);
+            if (items == null || items.Length == 0)
+                return null;
+
             var ret = new DownloadManagerItem()
             {
                 BytesPerSecond = items.Sum(x => x.BytesPerSecond),
                 CurrentSize = items.Sum(x => x.CurrentSize),
                 TotalSize = items.Sum(x => x.TotalSize),
-                State = DownloadState.None,
+                State = items.Any(x=>x.State!=items[0].State) ? DownloadState.None : items[0].State,
                 Path = path,
                 ErrorMessage = items.FirstOrDefault(x => x.State == DownloadState.Error)?.ErrorMessage,
                 RemoteUri = items.Count() == 1 ? items.FirstOrDefault().RemoteUri : null,
                 IsStarted = items.Any(x => x.IsStarted)
             };
 
-            if (items.Any(x => !x.IsIdle))
+            if (items.Any(x => !x.IsIdle && x.State!=DownloadState.Stopping))
                 ret.State = DownloadState.Downloading;
             else if (items.Any(x => x.State == DownloadState.Error))
                 ret.State = DownloadState.Error;
-            else if (items.All(x => x.State == DownloadState.Finished))
-                ret.State = DownloadState.Finished;
-            else if (items.All(x => x.State == DownloadState.Stopped))
-                ret.State = DownloadState.Stopped;
 
             return ret;
         }
 
+        private string ValidatePath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) path = Storage.SeparatorChar.ToString();
+            return path;
+        }
 
         public void Start(string path = null)
         {
+            path = ValidatePath(path);
+
             // get all items in path
             foreach (var item in GetItems(path))
             {
@@ -300,11 +311,16 @@ namespace PortableDownloader
             }
         }
 
-        public void Stop(string path = null)
+        public Task Stop(string path = null)
         {
+            path = ValidatePath(path);
+
+            var tasks = new List<Task>();
             foreach (var item in GetItems(path))
                 if (_downloadControllers.TryGetValue(item.Path, out DownloadController downloadController))
-                    downloadController.Stop();
+                    tasks.Add(downloadController.Stop());
+            
+            return Task.WhenAll(tasks.ToArray());
         }
 
         public void RemoveFinishedItems()

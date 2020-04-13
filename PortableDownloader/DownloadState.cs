@@ -12,6 +12,7 @@ namespace PortableDownloader
         Downloading,
         Finished,
         Stopped,
+        Stopping,
         Error
     }
 }

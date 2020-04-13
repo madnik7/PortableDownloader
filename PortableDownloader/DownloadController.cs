@@ -20,12 +20,12 @@ namespace PortableDownloader
 
         public static DownloadController Create(DownloadControllerOptions options)
         {
-            var downloadData = Load(options);
             options.DownloadPath = options.DownloadPath ?? throw new ArgumentNullException("DownloadPath");
             options.DownloadingPath = options.DownloadingPath ?? options.DownloadPath + options.DownloadingExtension;
             options.DownloadingInfoPath = options.DownloadingInfoPath ?? options.DownloadPath + options.DownloadingInfoExtension;
+
+            var downloadData = Load(options);
             options.Uri = options.Uri ?? downloadData.Uri ?? throw new ArgumentNullException("RemoteUri!");
-            options.DownloadingInfoPath = options.DownloadingInfoPath ?? options.DownloadPath + options.DownloadingInfoExtension;
             var ret = new DownloadController(options, downloadData);
             if (!options.IsStopped)
                 ret.Init().GetAwaiter();
@@ -51,7 +51,6 @@ namespace PortableDownloader
 
             // create download
             RangeDownloaded += Downloader_RangeDownloaded;
-            DownloadStateChanged += Downloader_DownloadStateChanged;
         }
 
         protected override Stream OpenStream()
@@ -72,11 +71,10 @@ namespace PortableDownloader
             Save();
         }
 
-        private void Downloader_DownloadStateChanged(object sender, EventArgs e)
+        protected override void OnBeforeFinish()
         {
-            if (DownloadState != DownloadState.Finished)
-                return;
-
+            base.OnBeforeFinish();
+            
             //rename the temp downloading file
             try
             {
