@@ -1,11 +1,12 @@
-﻿using Newtonsoft.Json;
-using PortableStorage;
+﻿using PortableStorage;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace PortableDownloader
@@ -54,8 +55,9 @@ namespace PortableDownloader
 
         public DownloadManager(DownloadManagerOptions options)
         {
-            if (options.Storage == null)
-                new ArgumentNullException("Storage");
+            if (options == null) throw new ArgumentNullException(nameof(options));
+            if (options.Storage == null) new ArgumentNullException(nameof(options.Storage));
+
             _storage = options.Storage;
             _dataPath = options.DataPath;
             DownloadingExtension = options.DownloadingExtension ?? new DownloadControllerOptions().DownloadingExtension;
@@ -74,7 +76,7 @@ namespace PortableDownloader
             // load last data
             try
             {
-                var ret = JsonConvert.DeserializeObject<DownloadManagerData>(_storage.ReadAllText(dataPath));
+                var ret = JsonSerializer.Deserialize<DownloadManagerData>(_storage.ReadAllText(dataPath));
                 foreach (var item in ret.Items)
                 {
                     _items.TryAdd(item.Path, item);
@@ -97,7 +99,7 @@ namespace PortableDownloader
                 {
                     Items = Items
                 };
-                _storage.WriteAllText(_dataPath, JsonConvert.SerializeObject(data));
+                _storage.WriteAllText(_dataPath, JsonSerializer.Serialize(data));
             }
         }
 
@@ -136,7 +138,7 @@ namespace PortableDownloader
             {
                 var downloadController = GetOrCreateDownloadController(path, remoteUri, resume: true, isStopped: startMode == StartMode.None);
                 if (startMode == StartMode.Start)
-                    StartContoller(downloadController);
+                    downloadController.Start().GetAwaiter();
 
                 // restart if it is stopped or in error state
                 if (startMode == StartMode.AddToQueue &&
@@ -182,11 +184,6 @@ namespace PortableDownloader
             _downloadControllers.TryAdd(path, newDownloadController);
 
             return newDownloadController;
-        }
-
-        private void StartContoller(DownloadController downloadController)
-        {
-            downloadController.Start().GetAwaiter();
         }
 
         private void DownloadController_DownloadStateChanged(object sender, EventArgs e)
@@ -243,7 +240,7 @@ namespace PortableDownloader
             var waitingItems = Items.Where(x => x.IsWaiting).ToArray();
 
             //start new downloads
-            for (var i = 0; i < waitingItems.Count() && i < MaxOfSimultaneousDownloads - startedItems.Count(); i++)
+            for (var i = 0; i < waitingItems.Length && i < MaxOfSimultaneousDownloads - startedItems.Length; i++)
                 Start(waitingItems[i].Path);
         }
 
@@ -256,7 +253,7 @@ namespace PortableDownloader
             UpdateItems();
 
             // return all for root request
-            if (path == Storage.SeparatorChar.ToString())
+            if (path == Storage.SeparatorChar.ToString(CultureInfo.InvariantCulture))
                 return _items.Select(x => x.Value).ToArray();
 
             // return only itelsef and items belong to sub storages
@@ -278,14 +275,14 @@ namespace PortableDownloader
                 BytesPerSecond = items.Sum(x => x.BytesPerSecond),
                 CurrentSize = items.Sum(x => x.CurrentSize),
                 TotalSize = items.Sum(x => x.TotalSize),
-                State = items.Any(x=>x.State!=items[0].State) ? DownloadState.None : items[0].State,
+                State = items.Any(x => x.State != items[0].State) ? DownloadState.None : items[0].State,
                 Path = path,
                 ErrorMessage = items.FirstOrDefault(x => x.State == DownloadState.Error)?.ErrorMessage,
-                RemoteUri = items.Count() == 1 ? items.FirstOrDefault().RemoteUri : null,
+                RemoteUri = items.Length == 1 ? items.FirstOrDefault().RemoteUri : null,
                 IsStarted = items.Any(x => x.IsStarted)
             };
 
-            if (items.Any(x => !x.IsIdle && x.State!=DownloadState.Stopping))
+            if (items.Any(x => !x.IsIdle && x.State != DownloadState.Stopping))
                 ret.State = DownloadState.Downloading;
             else if (items.Any(x => x.State == DownloadState.Error))
                 ret.State = DownloadState.Error;
@@ -293,9 +290,9 @@ namespace PortableDownloader
             return ret;
         }
 
-        private string ValidatePath(string path)
+        private static string ValidatePath(string path)
         {
-            if (string.IsNullOrEmpty(path)) path = Storage.SeparatorChar.ToString();
+            if (string.IsNullOrEmpty(path)) path = Storage.SeparatorChar.ToString(CultureInfo.InvariantCulture);
             return path;
         }
 
@@ -319,7 +316,7 @@ namespace PortableDownloader
             foreach (var item in GetItems(path))
                 if (_downloadControllers.TryGetValue(item.Path, out DownloadController downloadController))
                     tasks.Add(downloadController.Stop());
-            
+
             return Task.WhenAll(tasks.ToArray());
         }
 

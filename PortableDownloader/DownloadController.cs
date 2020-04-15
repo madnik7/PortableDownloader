@@ -1,7 +1,7 @@
-﻿using Newtonsoft.Json;
-using PortableStorage;
+﻿using PortableStorage;
 using System;
 using System.IO;
+using System.Text.Json;
 
 namespace PortableDownloader
 {
@@ -20,12 +20,13 @@ namespace PortableDownloader
 
         public static DownloadController Create(DownloadControllerOptions options)
         {
-            options.DownloadPath = options.DownloadPath ?? throw new ArgumentNullException("DownloadPath");
-            options.DownloadingPath = options.DownloadingPath ?? options.DownloadPath + options.DownloadingExtension;
-            options.DownloadingInfoPath = options.DownloadingInfoPath ?? options.DownloadPath + options.DownloadingInfoExtension;
+            if (options == null) throw new ArgumentNullException(nameof(options));
+            if (options.DownloadPath == null) throw new ArgumentNullException(nameof(options.DownloadPath));
+            options.DownloadingPath ??= options.DownloadPath + options.DownloadingExtension;
+            options.DownloadingInfoPath ??= options.DownloadPath + options.DownloadingInfoExtension;
 
             var downloadData = Load(options);
-            options.Uri = options.Uri ?? downloadData.Uri ?? throw new ArgumentNullException("RemoteUri!");
+            options.Uri ??= downloadData.Uri ?? throw new ArgumentNullException(nameof(options.Uri));
             var ret = new DownloadController(options, downloadData);
             if (!options.IsStopped)
                 ret.Init().GetAwaiter();
@@ -71,8 +72,10 @@ namespace PortableDownloader
             Save();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         protected override void OnBeforeFinish()
         {
+
             base.OnBeforeFinish();
             
             //rename the temp downloading file
@@ -107,7 +110,7 @@ namespace PortableDownloader
             try
             {
                 var json = options.Storage.ReadAllText(options.DownloadingInfoPath);
-                return JsonConvert.DeserializeObject<DownloadData>(json);
+                return JsonSerializer.Deserialize<DownloadData>(json);
             }
             catch
             {
@@ -123,7 +126,7 @@ namespace PortableDownloader
                 DownloadedRanges = DownloadedRanges,
                 Uri = Uri
             };
-            var json = JsonConvert.SerializeObject(data);
+            var json = System.Text.Json.JsonSerializer.Serialize(data);
             _storage.WriteAllText(_downloadingInfoPath, json);
         }
     }

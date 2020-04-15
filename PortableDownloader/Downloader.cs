@@ -72,17 +72,18 @@ namespace PortableDownloader
         public Downloader(DownloaderOptions options)
         {
             if (options.PartSize < 10000)
-                throw new ArgumentException("PartSize parameter must be equals or greater than 10000", "PartSize");
+                throw new ArgumentException("PartSize parameter must be equals or greater than 10000", nameof(options.PartSize));
 
             Uri = options.Uri;
             _stream = options.Stream;
-            DownloadedRanges = options.DownloadedRanges ?? new DownloadRange[0];
+            DownloadedRanges = options.DownloadedRanges ?? Array.Empty<DownloadRange>();
             MaxPartCount = options.MaxPartCount;
             MaxRetyCount = options.MaxRetryCount;
             PartSize = options.PartSize;
             State = options.IsStopped ? DownloadState.Stopped : DownloadState.None;
             AutoDisposeStream = options.AutoDisposeStream;
             AllowResuming = options.AllowResuming;
+            TotalSize = options.DownloadedRanges != null && options.DownloadedRanges.Length > 0 ? DownloadedRanges.Sum(x => x.To - x.From + 1) : 0;
         }
 
         private readonly object _monitorState = new object();
@@ -144,8 +145,8 @@ namespace PortableDownloader
                 _cancellationTokenSource?.Cancel();
             }
 
-            if (initTask != null) await initTask;
-            if (startTask != null) await initTask;
+            if (initTask != null) await initTask.ConfigureAwait(false);
+            if (startTask != null) await initTask.ConfigureAwait(false);
 
             State = DownloadState.Stopped;
         }
@@ -157,9 +158,9 @@ namespace PortableDownloader
         public async Task Init()
         {
             if (State == DownloadState.Stopping)
-                await Stop();
+                await Stop().ConfigureAwait(false);
 
-            await Init2();
+            await Init2().ConfigureAwait(false);
         }
 
         private Task Init2()
@@ -196,24 +197,23 @@ namespace PortableDownloader
                 GetStream();
 
                 // download the header
-                using (var httpClient = new HttpClient())
-                {
-                    var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Head, Uri), _cancellationTokenSource.Token);
-                    if (response.StatusCode != HttpStatusCode.OK)
-                        throw new Exception($"StatusCode is {response.StatusCode}");
+                using var httpClient = new HttpClient();
+                using var requestMessage = new HttpRequestMessage(HttpMethod.Head, Uri);
+                var response = await httpClient.SendAsync(requestMessage, _cancellationTokenSource.Token).ConfigureAwait(false);
+                if (response.StatusCode != HttpStatusCode.OK)
+                    throw new Exception($"StatusCode is {response.StatusCode}");
 
-                    IsResumingSupported = AllowResuming ? response.Headers.AcceptRanges.Contains("bytes") : false;
-                    TotalSize = response.Content.Headers.ContentLength ?? 0;
-                    if (response.Content.Headers.ContentLength == null)
-                        throw new Exception($"Could not retrieve the stream size: {Uri}");
+                IsResumingSupported = AllowResuming ? response.Headers.AcceptRanges.Contains("bytes") : false;
+                TotalSize = response.Content.Headers.ContentLength ?? 0;
+                if (response.Content.Headers.ContentLength == null)
+                    throw new Exception($"Could not retrieve the stream size: {Uri}");
 
-                    // create new download range if previous size is different
-                    if (DownloadedRanges.Length == 0 || DownloadedRanges.Sum(x => x.To - x.From + 1) != TotalSize)
-                        DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported ? PartSize : TotalSize);
+                // create new download range if previous size is different
+                if (DownloadedRanges.Length == 0 || DownloadedRanges.Sum(x => x.To - x.From + 1) != TotalSize)
+                    DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported ? PartSize : TotalSize);
 
-                    // finish initializing
-                    State = DownloadState.Initialized;
-                }
+                // finish initializing
+                State = DownloadState.Initialized;
             }
             catch (Exception ex)
             {
@@ -235,7 +235,7 @@ namespace PortableDownloader
         public async Task Start()
         {
             if (State == DownloadState.Stopping)
-                await Stop();
+                await Stop().ConfigureAwait(false);
 
             try
             {
@@ -248,7 +248,7 @@ namespace PortableDownloader
                 }
 
                 // init
-                await Init();
+                await Init().ConfigureAwait(false);
 
                 // Check point
                 if (State != DownloadState.Initialized)
@@ -256,7 +256,7 @@ namespace PortableDownloader
 
                 State = DownloadState.Downloading;
 
-                await StartImpl();
+                await StartImpl().ConfigureAwait(false);
 
                 // close stream before setting the state
                 FinalizeStream();
@@ -317,9 +317,9 @@ namespace PortableDownloader
                      try
                      {
                          if (IsResumingSupported)
-                             await DownloadPart(range, cancellationToken);
+                             await DownloadPart(range, cancellationToken).ConfigureAwait(true);
                          else
-                             await DownloadAll(cancellationToken);
+                             await DownloadAll(cancellationToken).ConfigureAwait(true);
 
                          exRoot = null;
                          return; // finished
@@ -340,7 +340,7 @@ namespace PortableDownloader
                      _cancellationTokenSource.Cancel(); // cancel all other parts
                  }
 
-             }, MaxPartCount, _cancellationTokenSource.Token);
+             }, MaxPartCount, _cancellationTokenSource.Token).ConfigureAwait(false);
 
             // release _cancellationTokenSource
             _cancellationTokenSource.Dispose();
@@ -352,65 +352,62 @@ namespace PortableDownloader
 
         private async Task DownloadAll(CancellationToken cancellationToken)
         {
-            using (var httpClient = new HttpClient())
+            using var httpClient = new HttpClient();
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
+            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            
+            // download to downloadedStream
+            var buffer = new byte[1024];
+            while (true)
             {
-                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, Uri), HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                {
-                    // download to downloadedStream
-                    var buffer = new byte[1024];
-                    while (true)
-                    {
-                        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-                        if (bytesRead == 0)
-                            break;
+                var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
+                if (bytesRead == 0)
+                    break;
 
-                        GetStream().Write(buffer, 0, bytesRead);
-                        OnDataReceived(bytesRead);
-                    }
-
-                    GetStream().Flush();
-                }
+                GetStream().Write(buffer, 0, bytesRead);
+                OnDataReceived(bytesRead);
             }
+
+            GetStream().Flush();
         }
 
         private async Task DownloadPart(DownloadRange downloadRange, CancellationToken cancellationToken)
         {
-            using (var httpClient = new HttpClient())
+            using var httpClient = new HttpClient();
+            
+            // get part from server and copy it to a memory stream
+            httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From, downloadRange.To);
+            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
+            var response = await httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
+            
+            using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            using var downloadedStream = new MemoryStream(PartSize);
+            // download to downloadedStream
+            var buffer = new byte[1024];
+            while (true)
             {
-                // get part from server and copy it to a memory stream
-                httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From, downloadRange.To);
-                var response = await httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, Uri), cancellationToken);
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var downloadedStream = new MemoryStream(PartSize))
-                {
-                    // download to downloadedStream
-                    var buffer = new byte[1024];
-                    while (true)
-                    {
-                        var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken);
-                        if (bytesRead == 0)
-                            break;
+                var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
+                if (bytesRead == 0)
+                    break;
 
-                        downloadedStream.Write(buffer, 0, bytesRead);
-                        OnDataReceived(bytesRead);
-                    }
+                downloadedStream.Write(buffer, 0, bytesRead);
+                OnDataReceived(bytesRead);
+            }
 
-                    // copy part to file
-                    lock (_monitor)
-                    {
-                        if (cancellationToken.IsCancellationRequested)
-                            throw new OperationCanceledException();
+            // copy part to file
+            lock (_monitor)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    throw new OperationCanceledException();
 
-                        downloadedStream.Position = 0;
-                        GetStream().Position = downloadRange.From;
-                        downloadedStream.CopyTo(GetStream());
-                        GetStream().Flush();
-                        downloadRange.IsDone = true;
-                        _currentDownloadingSize -= downloadedStream.Length;
-                        RangeDownloaded?.Invoke(this, new EventArgs());
-                    }
-                }
+                downloadedStream.Position = 0;
+                GetStream().Position = downloadRange.From;
+                downloadedStream.CopyTo(GetStream());
+                GetStream().Flush();
+                downloadRange.IsDone = true;
+                _currentDownloadingSize -= downloadedStream.Length;
+                RangeDownloaded?.Invoke(this, new EventArgs());
             }
         }
 
@@ -446,7 +443,7 @@ namespace PortableDownloader
                                     await body(partition.Current).ContinueWith(t =>
                                     {
                                         //observe exceptions
-                                    });
+                                    }, TaskScheduler.Current).ConfigureAwait(true);
                                 }
                         }, cancellationToken);
 
