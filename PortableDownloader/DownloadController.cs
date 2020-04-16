@@ -104,7 +104,7 @@ namespace PortableDownloader
             catch { }
         }
 
-
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         private static DownloadData Load(DownloadControllerOptions options)
         {
             try

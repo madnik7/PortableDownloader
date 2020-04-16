@@ -31,9 +31,8 @@ namespace PortableDownloader.Test
             }
         }
 
-        public void ForReadME1()
+        public static void ForReadME1()
         {
-
             using var downloader = new Downloader(new DownloaderOptions()
             {
                 Uri = new Uri("https://abcd.com/file1.zip"),
@@ -49,10 +48,10 @@ namespace PortableDownloader.Test
                 Thread.Sleep(500);
         }
 
-        public void ForReadME2()
+        public static void ForReadME2()
         {
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
-            var downloadController = DownloadController.Create(new DownloadControllerOptions()
+            using var downloadController = DownloadController.Create(new DownloadControllerOptions()
             {
                 Uri = new Uri("https://abcd.com/file1.zip"),
                 Storage = storage,
@@ -69,7 +68,7 @@ namespace PortableDownloader.Test
 
         }
 
-        public void ForReadME3()
+        public static void ForReadME3()
         {
             // Create a portable storage
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
@@ -216,7 +215,7 @@ namespace PortableDownloader.Test
 
         static bool StreamEquals(Stream stream1, Stream stream2)
         {
-            using var md5 = MD5.Create();
+            using var md5 = SHA256.Create();
             return md5.ComputeHash(stream1).SequenceEqual(md5.ComputeHash(stream2));
         }
 

@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 
 namespace PortableDownloader
 {
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1063:Implement IDisposable Correctly", Justification = "<Pending>")]
     public class Downloader : IDisposable
     {
         private class SpeedData
@@ -71,6 +72,7 @@ namespace PortableDownloader
 
         public Downloader(DownloaderOptions options)
         {
+            if (options is null) throw new ArgumentNullException(nameof(options));
             if (options.PartSize < 10000)
                 throw new ArgumentException("PartSize parameter must be equals or greater than 10000", nameof(options.PartSize));
 
@@ -300,6 +302,7 @@ namespace PortableDownloader
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         private async Task StartImpl()
         {
             _cancellationTokenSource = new CancellationTokenSource();
@@ -356,7 +359,7 @@ namespace PortableDownloader
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
             var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            
+
             // download to downloadedStream
             var buffer = new byte[1024];
             while (true)
@@ -375,12 +378,12 @@ namespace PortableDownloader
         private async Task DownloadPart(DownloadRange downloadRange, CancellationToken cancellationToken)
         {
             using var httpClient = new HttpClient();
-            
+
             // get part from server and copy it to a memory stream
             httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From, downloadRange.To);
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
             var response = await httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
-            
+
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var downloadedStream = new MemoryStream(PartSize);
             // download to downloadedStream
@@ -487,15 +490,33 @@ namespace PortableDownloader
             return _stream;
         }
 
+        private bool _disposedValue = false; // To detect redundant calls
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposedValue)
+                return;
+
+            if (disposing)
+            {
+                lock (_monitor)
+                {
+                    _cancellationTokenSource?.Cancel();
+                    _cancellationTokenSource?.Dispose();
+                    if (AutoDisposeStream)
+                        _stream?.Dispose();
+                }
+            }
+
+            _disposedValue = true;
+        }
+
+        // This code added to correctly implement the disposable pattern.
         public void Dispose()
         {
-            lock (_monitor)
-            {
-                _cancellationTokenSource?.Cancel();
-                _cancellationTokenSource?.Dispose();
-                if (AutoDisposeStream)
-                    _stream?.Dispose();
-            }
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
+
 }

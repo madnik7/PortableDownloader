@@ -56,7 +56,7 @@ namespace PortableDownloader
         public DownloadManager(DownloadManagerOptions options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
-            if (options.Storage == null) new ArgumentNullException(nameof(options.Storage));
+            if (options.Storage == null) throw new ArgumentNullException(nameof(options.Storage));
 
             _storage = options.Storage;
             _dataPath = options.DataPath;
@@ -71,6 +71,7 @@ namespace PortableDownloader
             Load(options.DataPath);
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         private void Load(string dataPath)
         {
             // load last data
@@ -110,6 +111,8 @@ namespace PortableDownloader
             Save();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "<Pending>")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         private void AddImpl(string path, Uri remoteUri, StartMode startMode)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
@@ -207,14 +210,10 @@ namespace PortableDownloader
                 _items.TryRemove(item.Path, out _);
 
                 // remove old files
-                try
-                {
-                    var downloadingName = GetDownloadingPath(item.Path);
-                    var downloadingInfoName = GetDownloadingInfoPath(item.Path);
-                    if (_storage.EntryExists(downloadingName)) _storage.DeleteStream(downloadingName);
-                    if (_storage.EntryExists(downloadingInfoName)) _storage.DeleteStream(downloadingInfoName);
-                }
-                catch { }
+                var downloadingName = GetDownloadingPath(item.Path);
+                var downloadingInfoName = GetDownloadingInfoPath(item.Path);
+                if (_storage.EntryExists(downloadingName)) _storage.DeleteStream(downloadingName);
+                if (_storage.EntryExists(downloadingInfoName)) _storage.DeleteStream(downloadingInfoName);
             }
         }
 
@@ -340,11 +339,27 @@ namespace PortableDownloader
             return ext == DownloadingExtension || ext == DownloadingInfoExtension;
         }
 
+        private bool _disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposedValue)
+                return;
+
+            if (disposing)
+            {
+                Save();
+                foreach (var item in _downloadControllers)
+                    item.Value.Dispose();
+            }
+
+            _disposedValue = true;
+        }
+
         public void Dispose()
         {
-            Save();
-            foreach (var item in _downloadControllers)
-                item.Value.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -8,3 +8,5 @@ using System.Diagnostics.CodeAnalysis;
 [assembly: SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "<Pending>", Scope = "module")]
 [assembly: SuppressMessage("Naming", "CA1721:Property names should not match get methods", Justification = "<Pending>", Scope = "module")]
 [assembly: SuppressMessage("Naming", "CA1716:Identifiers should not match keywords", Justification = "<Pending>", Scope = "member", Target = "~M:PortableDownloader.IDownloadManager.Stop(System.String)~System.Threading.Tasks.Task")]
+[assembly: SuppressMessage("Usage", "CA2208:Instantiate argument exceptions correctly", Justification = "<Pending>", Scope = "module")]
+[assembly: SuppressMessage("Globalization", "CA1303:Do not pass literals as localized parameters", Justification = "<Pending>", Scope = "module")]
