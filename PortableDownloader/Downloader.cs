@@ -386,8 +386,9 @@ namespace PortableDownloader
 
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             using var downloadedStream = new MemoryStream(PartSize);
+            
             // download to downloadedStream
-            var buffer = new byte[1024];
+            var buffer = new byte[0xFFFF];
             while (true)
             {
                 var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);

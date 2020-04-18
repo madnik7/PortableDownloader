@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace PortableDownloader.Test
 {
@@ -171,18 +172,31 @@ namespace PortableDownloader.Test
         }
 
 
-        //[TestMethod]
+        [TestMethod]
         public void Test_Foo()
         {
             var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
 
-            var uri = new Uri("bgfile");
-            var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 100 };
+            var uri = new Uri("https://az792536.vo.msecnd.net/vms/VMBuild_20190311/VirtualBox/MSEdge/MSEdge.Win10.VirtualBox.zip");
+            var dmOptions = new DownloadManagerOptions() { 
+                Storage = storage, 
+                MaxOfSimultaneousDownloads = 1, 
+                PartSize=1000 * 1000000, 
+                MaxPartCount=1,
+                AllowResuming = true,
+            };
+
             using var dm = new DownloadManager(dmOptions);
             dm.Add("file1", uri);
             dm.Start("file1");
-            WaitForAllDownloads(dm);
+
+            while (!dm.IsIdle)
+            {
+                Debug.WriteLine(dm.GetItem().BytesPerSecond / 1000);
+                Thread.Sleep(1000);
+            }
+
 
             Assert.IsTrue(storage.EntryExists("file1"));
 
