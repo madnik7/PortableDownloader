@@ -4,7 +4,7 @@
     {
         public long From { get; set; }
         public long To { get; set; }
-        public long CurrentPosition { get; set; }
+        public long CurrentOffset { get; set; }
         public bool IsDone { get; set; }
     }
 }

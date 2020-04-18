@@ -172,18 +172,19 @@ namespace PortableDownloader.Test
         }
 
 
-        [TestMethod]
+        //[TestMethod]
         public void Test_Foo()
         {
             var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
 
             var uri = new Uri("https://az792536.vo.msecnd.net/vms/VMBuild_20190311/VirtualBox/MSEdge/MSEdge.Win10.VirtualBox.zip");
-            var dmOptions = new DownloadManagerOptions() { 
-                Storage = storage, 
-                MaxOfSimultaneousDownloads = 1, 
-                PartSize=1000 * 1000000, 
-                MaxPartCount=1,
+            var dmOptions = new DownloadManagerOptions()
+            {
+                Storage = storage,
+                MaxOfSimultaneousDownloads = 1,
+                PartSize = 1000 * 1000000,
+                MaxPartCount = 1,
                 AllowResuming = true,
             };
 
@@ -209,13 +210,13 @@ namespace PortableDownloader.Test
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
 
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
-            var dmOptions = new DownloadManagerOptions() { Storage = storage};
+            var dmOptions = new DownloadManagerOptions() { Storage = storage };
             using var dm = new DownloadManager(dmOptions);
 
             dm.Add("file1", uri, false);
             dm.Add("file1", uri, true);
             Assert.IsFalse(dm.IsIdle, "dowload is not started after second add");
-            
+
             dm.Add("file1", uri);
             WaitForAllDownloads(dm);
 
@@ -229,8 +230,8 @@ namespace PortableDownloader.Test
 
         static bool StreamEquals(Stream stream1, Stream stream2)
         {
-            using var md5 = SHA256.Create();
-            return md5.ComputeHash(stream1).SequenceEqual(md5.ComputeHash(stream2));
+            using var hash = SHA256.Create();
+            return hash.ComputeHash(stream1).SequenceEqual(hash.ComputeHash(stream2));
         }
 
         [TestMethod]
@@ -260,7 +261,7 @@ namespace PortableDownloader.Test
         {
             using var mem1 = new MemoryStream(500000);
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
-            using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false });
+            using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, MaxPartCount = 2, PartSize = 10000, AutoDisposeStream = false }); ;
 
             Assert.AreEqual(DownloadState.None, downloader.State, "state should be none before start");
 

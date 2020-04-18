@@ -36,7 +36,6 @@ namespace PortableDownloader
         private Stream _stream;
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ConcurrentQueue<SpeedData> _speedMonitor = new ConcurrentQueue<SpeedData>();
-        private long _currentDownloadingSize;
         private DownloadState _state = DownloadState.None;
 
         public bool IsStarted
@@ -64,11 +63,12 @@ namespace PortableDownloader
         public Exception LastException { get; private set; }
         public bool IsResumingSupported { get; private set; }
         public int MaxPartCount { get; set; }
-        public int PartSize { get; private set; }
-        public long CurrentSize => DownloadedRanges.Where(x => x.IsDone).Sum(x => x.To - x.From + 1) + _currentDownloadingSize; // current downloading range + dowloaded chunk
+        public long PartSize { get; private set; }
+        public long CurrentSize => DownloadedRanges.Sum(x => x.To - x.From - x.CurrentOffset + 1);
         public bool AutoDisposeStream { get; }
         public bool AllowResuming { get; }
         public int MaxRetyCount { get; set; }
+        private readonly int _writeBufferSize;
 
         public Downloader(DownloaderOptions options)
         {
@@ -78,6 +78,7 @@ namespace PortableDownloader
 
             Uri = options.Uri;
             _stream = options.Stream;
+            _writeBufferSize = options.WriteBufferSize;
             DownloadedRanges = options.DownloadedRanges ?? Array.Empty<DownloadRange>();
             MaxPartCount = options.MaxPartCount;
             MaxRetyCount = options.MaxRetryCount;
@@ -294,6 +295,8 @@ namespace PortableDownloader
             // close stream
             lock (_monitor)
             {
+                Flush();
+
                 if (AutoDisposeStream)
                 {
                     _stream?.Dispose();
@@ -361,7 +364,7 @@ namespace PortableDownloader
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
             // download to downloadedStream
-            var buffer = new byte[1024];
+            var buffer = new byte[_writeBufferSize];
             while (true)
             {
                 var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
@@ -380,38 +383,45 @@ namespace PortableDownloader
             using var httpClient = new HttpClient();
 
             // get part from server and copy it to a memory stream
-            httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From, downloadRange.To);
+            httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From + downloadRange.CurrentOffset, downloadRange.To);
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
             var response = await httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
 
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            using var downloadedStream = new MemoryStream(PartSize);
-            
+
             // download to downloadedStream
-            var buffer = new byte[0xFFFF];
+            var buffer = new byte[_writeBufferSize];
             while (true)
             {
                 var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
                 if (bytesRead == 0)
                     break;
 
-                downloadedStream.Write(buffer, 0, bytesRead);
-                OnDataReceived(bytesRead);
+                // copy part to file
+                lock (_monitor)
+                {
+                    GetStream().Position = downloadRange.From + downloadRange.CurrentOffset;
+                    GetStream().Write(buffer, 0, bytesRead);
+                    downloadRange.CurrentOffset = GetStream().Position - downloadRange.From;
+                    OnDataReceived(bytesRead);
+                }
+
             }
 
             // copy part to file
             lock (_monitor)
             {
-                if (cancellationToken.IsCancellationRequested)
-                    throw new OperationCanceledException();
-
-                downloadedStream.Position = 0;
-                GetStream().Position = downloadRange.From;
-                downloadedStream.CopyTo(GetStream());
-                GetStream().Flush();
                 downloadRange.IsDone = true;
-                _currentDownloadingSize -= downloadedStream.Length;
                 RangeDownloaded?.Invoke(this, new EventArgs());
+            }
+        }
+
+        public void Flush()
+        {
+            lock (_monitor)
+            {
+                if (_stream != null)
+                    _stream.Flush();
             }
         }
 
@@ -454,13 +464,12 @@ namespace PortableDownloader
             return Task.WhenAll(tasks);
         }
 
-        private void OnDataReceived(int readedCount)
+        protected virtual void OnDataReceived(int readedCount)
         {
             var curTotalSeconds = TimeSpan.FromTicks(DateTime.Now.Ticks).TotalSeconds;
 
             lock (_monitor)
             {
-                _currentDownloadingSize += readedCount;
                 _speedMonitor.Enqueue(new SpeedData() { Seconds = curTotalSeconds, Count = readedCount });
 
                 // notify new data received

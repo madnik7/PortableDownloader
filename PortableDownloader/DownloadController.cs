@@ -34,10 +34,11 @@ namespace PortableDownloader
         }
 
         private DownloadController(DownloadControllerOptions options, DownloadData downloadData)
-            : base(new DownloaderOptions() { 
-                Uri = options.Uri, 
-                DownloadedRanges = downloadData.DownloadedRanges, 
-                AutoDisposeStream = true, 
+            : base(new DownloaderOptions()
+            {
+                Uri = options.Uri,
+                DownloadedRanges = downloadData.DownloadedRanges,
+                AutoDisposeStream = true,
                 IsStopped = options.IsStopped,
                 AllowResuming = options.AllowResuming,
                 MaxPartCount = options.MaxPartCount,
@@ -49,9 +50,6 @@ namespace PortableDownloader
             _downloadingInfoPath = options.DownloadingInfoPath;
             _downloadingPath = options.DownloadingPath;
             _storage = options.Storage;
-
-            // create download
-            RangeDownloaded += Downloader_RangeDownloaded;
         }
 
         protected override Stream OpenStream()
@@ -66,10 +64,16 @@ namespace PortableDownloader
             return stream;
         }
 
-        private void Downloader_RangeDownloaded(object sender, EventArgs e)
+        private int _totalRead;
+        protected override void OnDataReceived(int readedCount)
         {
-            // save new DownloadedRanges
-            Save();
+            base.OnDataReceived(readedCount);
+            _totalRead += readedCount;
+            if (_totalRead > 1000000)
+            {
+                Save();
+                _totalRead = 0;
+            }
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
@@ -77,7 +81,7 @@ namespace PortableDownloader
         {
 
             base.OnBeforeFinish();
-            
+
             //rename the temp downloading file
             try
             {
@@ -89,6 +93,7 @@ namespace PortableDownloader
             // rename stream
             try
             {
+                Save();
                 _storage.Rename(_downloadingPath, Path.GetFileNameWithoutExtension(_downloadingPath));
             }
             catch (Exception ex)
@@ -121,12 +126,14 @@ namespace PortableDownloader
 
         private void Save()
         {
+            Flush();
+
             var data = new DownloadData()
             {
                 DownloadedRanges = DownloadedRanges,
                 Uri = Uri
             };
-            var json = System.Text.Json.JsonSerializer.Serialize(data);
+            var json = JsonSerializer.Serialize(data);
             _storage.WriteAllText(_downloadingInfoPath, json);
         }
     }
