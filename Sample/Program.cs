@@ -12,7 +12,7 @@ namespace PortableDownloader.Sample
         {
             Console.WriteLine("Portable Downloader Sample");
             Console.WriteLine("");
-            Console.WriteLine("dl url path [/PartSize x] [/MaxPartCount x] [WriteBuffer x] /DisableResuming [/WebclientPath x]");
+            Console.WriteLine("dl url path [/PartSize x] [/MaxPartCount x] [WriteBuffer x] /DisableResuming /ContinueAfterRestart [/WebclientPath x]");
         }
 
         static void Main(string[] args)
@@ -23,8 +23,9 @@ namespace PortableDownloader.Sample
                 return;
             }
 
-            var dmOptions = new DownloadManagerOptions();
+            var dmOptions = new DownloadManagerOptions() { RestoreLastList = false };
             var webclientPath = "";
+            var continueAfterRestart = false;
 
             var url = args[0];
             var path = args[1];
@@ -48,8 +49,8 @@ namespace PortableDownloader.Sample
                 else if (item.Equals("/DisableResuming", StringComparison.InvariantCultureIgnoreCase))
                     dmOptions.AllowResuming = false;
 
-                else if (item.Equals("/SaveStates", StringComparison.InvariantCultureIgnoreCase))
-                    dmOptions.AllowResuming = false;
+                else if (item.Equals("/ContinueAfterRestart", StringComparison.InvariantCultureIgnoreCase))
+                    continueAfterRestart = true;
 
 
                 lastKey = item;
@@ -59,7 +60,7 @@ namespace PortableDownloader.Sample
             if (!string.IsNullOrEmpty(webclientPath)) DownloadByWebClient(url, webclientPath);
 
             // download by portable
-            DownloadByPortableDownloader(url, path, dmOptions);
+            DownloadByPortableDownloader(url, path, dmOptions, continueAfterRestart);
 
         }
 
@@ -80,20 +81,20 @@ namespace PortableDownloader.Sample
         }
 
 
-        static void DownloadByPortableDownloader(string url, string path, DownloadManagerOptions options)
+        static void DownloadByPortableDownloader(string url, string path, DownloadManagerOptions options, bool continueAfterRestart)
         {
             var startTime = DateTime.Now;
 
-            Console.WriteLine($"Download using PortableDownloader. MaxPartCount: {options.MaxPartCount}, PartSize: {options.PartSize}, AllowResuming: {options.AllowResuming}, WriteBufferSize: {options.WriteBufferSize}");
+            Console.WriteLine($"Download using PortableDownloader. \nMaxPartCount: {options.MaxPartCount}, \nPartSize: {options.PartSize}, \nAllowResuming: {options.AllowResuming}, \nWriteBufferSize: {options.WriteBufferSize}, \ncontinueAfterRestart: {continueAfterRestart}");
+            Console.WriteLine();
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(Path.GetDirectoryName(path), true, null);
             options.Storage = storage;
             using var dm = new DownloadManager(options);
-
-
             var streamPath = Path.GetFileName(path);
 
-            //cleanup
-            dm.Cancel(streamPath);
+            //delete old download
+            if (!continueAfterRestart)
+                dm.Cancel(streamPath);
 
             dm.Add(streamPath, new Uri(url));
             while (!dm.IsIdle)

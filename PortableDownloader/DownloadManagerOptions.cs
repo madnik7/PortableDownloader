@@ -19,6 +19,7 @@ namespace PortableDownloader
         public int MaxRetryCount { get; set; } = DefaultOptions.MaxRetryCount;
         public bool AllowResuming { get; set; } = DefaultOptions.AllowResuming;
         public int WriteBufferSize { get; set; } = DefaultOptions.WriteBufferSize;
+        public bool RestoreLastList { get; set; } = true;
 
     }
 }
