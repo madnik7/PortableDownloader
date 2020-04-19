@@ -322,10 +322,7 @@ namespace PortableDownloader
                  {
                      try
                      {
-                         if (IsResumingSupported)
-                             await DownloadPart(range, cancellationToken).ConfigureAwait(true);
-                         else
-                             await DownloadAll(cancellationToken).ConfigureAwait(true);
+                         await DownloadPart(range, cancellationToken).ConfigureAwait(true);
 
                          exRoot = null;
                          return; // finished
@@ -356,36 +353,18 @@ namespace PortableDownloader
                 throw exRoot;
         }
 
-        private async Task DownloadAll(CancellationToken cancellationToken)
-        {
-            using var httpClient = new HttpClient();
-            using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
-            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-            using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-
-            // download to downloadedStream
-            var buffer = new byte[_writeBufferSize];
-            while (true)
-            {
-                var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
-                if (bytesRead == 0)
-                    break;
-
-                GetStream().Write(buffer, 0, bytesRead);
-                OnDataReceived(bytesRead);
-            }
-
-            GetStream().Flush();
-        }
-
         private async Task DownloadPart(DownloadRange downloadRange, CancellationToken cancellationToken)
         {
             using var httpClient = new HttpClient();
 
             // get part from server and copy it to a memory stream
-            httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From + downloadRange.CurrentOffset, downloadRange.To);
+            if (IsResumingSupported)
+                httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From + downloadRange.CurrentOffset, downloadRange.To);
+            else if (downloadRange.From != 0)
+                throw new InvalidOperationException("downloadRange.From should be zero when resuming not supported!");
+
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
-            var response = await httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
+            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
 
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 

@@ -2,7 +2,7 @@
   "profiles": {
     "Sample": {
       "commandName": "Project",
-      "commandLineArgs": "\"https://az792536.vo.msecnd.net/vms/VMBuild_20190311/VirtualBox/MSEdge/MSEdge.Win10.VirtualBox.zip\" \"c:\\t\\test\\file.zip\" /webclientPath2 \"c:\\t\\test\\file2.zip\" /partSize 5000001 /maxPartCount 10 /disableResuming2 /writeBufferSize2 1024"
+      "commandLineArgs": "\"https://az792536.vo.msecnd.net/vms/VMBuild_20190311/VirtualBox/MSEdge/MSEdge.Win10.VirtualBox.zip\"  \"c:\\t\\test\\file.zip\" /webclientPath2 \"c:\\t\\test\\file2.zip\" /partSize 5000001 /maxPartCount 4 /disableResuming2 /writeBufferSize2 1024  \"https://bpacks.blob.core.windows.net/bbcpersian/bbcpersian.bpack\" "
     }
   }
 }

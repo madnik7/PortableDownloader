@@ -48,6 +48,9 @@ namespace PortableDownloader.Sample
                 else if (item.Equals("/DisableResuming", StringComparison.InvariantCultureIgnoreCase))
                     dmOptions.AllowResuming = false;
 
+                else if (item.Equals("/SaveStates", StringComparison.InvariantCultureIgnoreCase))
+                    dmOptions.AllowResuming = false;
+
 
                 lastKey = item;
             }
