@@ -7,15 +7,18 @@ namespace PortableDownloader
 {
     public class DownloadManagerOptions
     {
+        private static readonly DownloadControllerOptions DefaultOptions = new DownloadControllerOptions();
+
         public Storage Storage { get; set; }
         public string DataPath { get; set; } = ".downloadlist.json";
-        public string DownloadingInfoExtension { get; set; }
-        public string DownloadingExtension { get; set; }
         public int MaxOfSimultaneousDownloads { get; set; } = 3;
-        public int MaxPartCount { get; set; } = 4;
-        public int PartSize { get; set; } = 500 * 1000;
-        public int MaxRetryCount { get; set; }
-        public bool AllowResuming { get; set; } = true;
+        public string DownloadingInfoExtension { get; set; } = DefaultOptions.DownloadingInfoExtension;
+        public string DownloadingExtension { get; set; } = DefaultOptions.DownloadingExtension;
+        public int MaxPartCount { get; set; } = DefaultOptions.MaxPartCount;
+        public long PartSize { get; set; } = DefaultOptions.PartSize;
+        public int MaxRetryCount { get; set; } = DefaultOptions.MaxRetryCount;
+        public bool AllowResuming { get; set; } = DefaultOptions.AllowResuming;
+        public int WriteBufferSize { get; set; } = DefaultOptions.WriteBufferSize;
 
     }
 }

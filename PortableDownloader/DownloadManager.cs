@@ -27,8 +27,9 @@ namespace PortableDownloader
 
         public bool AllowResuming { get; private set; }
         public int MaxPartCount { get; private set; }
-        public int PartSize { get; private set; }
+        public long PartSize { get; private set; }
         public int MaxRetryCount { get; private set; }
+        public int WriteBufferSize { get; private set; }
 
 
         private readonly object _monitor = new object();
@@ -60,13 +61,14 @@ namespace PortableDownloader
 
             _storage = options.Storage;
             _dataPath = options.DataPath;
-            DownloadingExtension = options.DownloadingExtension ?? new DownloadControllerOptions().DownloadingExtension;
-            DownloadingInfoExtension = options.DownloadingInfoExtension ?? new DownloadControllerOptions().DownloadingInfoExtension;
             _maxOfSimultaneousDownloads = options.MaxOfSimultaneousDownloads;
+            DownloadingExtension = options.DownloadingExtension;
+            DownloadingInfoExtension = options.DownloadingInfoExtension;
             AllowResuming = options.AllowResuming;
             MaxPartCount = options.MaxPartCount;
             PartSize = options.PartSize;
             MaxRetryCount = options.MaxRetryCount;
+            WriteBufferSize = options.WriteBufferSize;
 
             Load(options.DataPath);
         }
@@ -181,6 +183,9 @@ namespace PortableDownloader
                 MaxPartCount = MaxPartCount,
                 PartSize = PartSize,
                 MaxRetryCount = MaxRetryCount,
+                DownloadingExtension = DownloadingExtension,
+                DownloadingInfoExtension = DownloadingInfoExtension,
+                WriteBufferSize = WriteBufferSize,
 
             });
             newDownloadController.DownloadStateChanged += DownloadController_DownloadStateChanged;

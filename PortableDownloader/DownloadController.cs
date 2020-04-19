@@ -43,7 +43,8 @@ namespace PortableDownloader
                 AllowResuming = options.AllowResuming,
                 MaxPartCount = options.MaxPartCount,
                 MaxRetryCount = options.MaxRetryCount,
-                PartSize = options.PartSize
+                PartSize = options.PartSize,
+                WriteBufferSize = options.WriteBufferSize,
             })
         {
             DownloadPath = options.DownloadPath;

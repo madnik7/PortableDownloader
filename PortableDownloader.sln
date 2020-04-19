@@ -20,6 +20,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PortableDownloader", "Porta
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PortableDownloader.Test", "PortableDownloader.Test\PortableDownloader.Test.csproj", "{45562FB9-B7C9-4312-AEE0-B80998FC4ACF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csproj", "{44193FA3-2719-46CE-B206-471AE8131540}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -44,6 +46,14 @@ Global
 		{45562FB9-B7C9-4312-AEE0-B80998FC4ACF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{45562FB9-B7C9-4312-AEE0-B80998FC4ACF}.Release3.5|Any CPU.ActiveCfg = Release|Any CPU
 		{45562FB9-B7C9-4312-AEE0-B80998FC4ACF}.Release3.5|Any CPU.Build.0 = Release|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Debug3.5|Any CPU.ActiveCfg = Debug|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Debug3.5|Any CPU.Build.0 = Debug|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Release3.5|Any CPU.ActiveCfg = Release|Any CPU
+		{44193FA3-2719-46CE-B206-471AE8131540}.Release3.5|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
