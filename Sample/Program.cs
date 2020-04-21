@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace PortableDownloader.Sample
 {
@@ -12,7 +15,7 @@ namespace PortableDownloader.Sample
         {
             Console.WriteLine("Portable Downloader Sample");
             Console.WriteLine("");
-            Console.WriteLine("dl url path [/PartSize x] [/MaxPartCount x] [WriteBuffer x] /DisableResuming /ContinueAfterRestart [/WebclientPath x]");
+            Console.WriteLine("dl url path [/PartSize x] [/MaxPartCount x] [WriteBufferSize x] /DisableResuming");
         }
 
         static void Main(string[] args)
@@ -24,7 +27,6 @@ namespace PortableDownloader.Sample
             }
 
             var dmOptions = new DownloadManagerOptions() { RestoreLastList = false };
-            var webclientPath = "";
             var continueAfterRestart = false;
 
             var url = args[0];
@@ -34,10 +36,7 @@ namespace PortableDownloader.Sample
             var lastKey = "";
             foreach (var item in args)
             {
-                if (lastKey.Equals("/WebclientPath", StringComparison.InvariantCultureIgnoreCase))
-                    webclientPath = item;
-
-                else if (lastKey.Equals("/PartSize", StringComparison.InvariantCultureIgnoreCase))
+                if (lastKey.Equals("/PartSize", StringComparison.InvariantCultureIgnoreCase))
                     dmOptions.PartSize = long.Parse(item);
 
                 else if (lastKey.Equals("/MaxPartCount", StringComparison.InvariantCultureIgnoreCase))
@@ -49,43 +48,40 @@ namespace PortableDownloader.Sample
                 else if (item.Equals("/DisableResuming", StringComparison.InvariantCultureIgnoreCase))
                     dmOptions.AllowResuming = false;
 
-                else if (item.Equals("/ContinueAfterRestart", StringComparison.InvariantCultureIgnoreCase))
-                    continueAfterRestart = true;
-
 
                 lastKey = item;
             }
 
-            // download webclient
-            if (!string.IsNullOrEmpty(webclientPath)) DownloadByWebClient(url, webclientPath);
-
             // download by portable
-            DownloadByPortableDownloader(url, path, dmOptions, continueAfterRestart);
+            DownloadByPortableDownloader(url, path, dmOptions, true);
 
+        }
+
+        static void ReportSpeed(DateTime startTime, long size)
+        {
+            var totalSeconds = Math.Max(1, (int)(DateTime.Now - startTime).TotalSeconds);
+            var bytePerSeconds = (int)(size / totalSeconds);
+            var speed = ((float)bytePerSeconds / 1000000).ToString("0.00");
+            Console.WriteLine($"** Download has finished. Size: {size}, Time: {totalSeconds} Seconds, Speed: {speed} MB/s");
+            Console.WriteLine();
         }
 
         static void DownloadByWebClient(string url, string path)
         {
             var startTime = DateTime.Now;
+            if (File.Exists(path)) File.Delete(path);
 
             Console.WriteLine("Download using webClient: ");
             var webClient = new WebClient();
             webClient.DownloadFile(url, path);
-
-            var size = new FileInfo(path).Length;
-            var totalSeconds = Math.Max(1, (int)(DateTime.Now - startTime).TotalSeconds);
-            var bytePerSeconds = (int)(size / totalSeconds);
-            var speed = ((float)bytePerSeconds / 1000000).ToString("0.00");
-            Console.WriteLine($"** WebClient has finished. Size: {size}, Time: {totalSeconds} Seconds, Speed: {speed} MB/s");
-            Console.WriteLine();
+            ReportSpeed(startTime, new FileInfo(path).Length);
         }
-
 
         static void DownloadByPortableDownloader(string url, string path, DownloadManagerOptions options, bool continueAfterRestart)
         {
             var startTime = DateTime.Now;
 
-            Console.WriteLine($"Download using PortableDownloader. \nMaxPartCount: {options.MaxPartCount}, \nPartSize: {options.PartSize}, \nAllowResuming: {options.AllowResuming}, \nWriteBufferSize: {options.WriteBufferSize}, \ncontinueAfterRestart: {continueAfterRestart}");
+            Console.WriteLine($"Download using PortableDownloader. \nMaxPartCount: {options.MaxPartCount}, \nPartSize: {options.PartSize}, \nAllowResuming: {options.AllowResuming}, \nWriteBufferSize: {options.WriteBufferSize}");
             Console.WriteLine();
             using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(Path.GetDirectoryName(path), true, null);
             options.Storage = storage;
@@ -100,20 +96,13 @@ namespace PortableDownloader.Sample
             while (!dm.IsIdle)
             {
                 var item = dm.GetItem();
-                var totalSeconds2 = Math.Max(1, (int)(DateTime.Now - startTime).TotalSeconds);
-                var speed2 = ((float)item.BytesPerSecond / 1000000).ToString("0.00");
-                Console.WriteLine($"Downloaded: {item.CurrentSize} / { item.TotalSize }, Timer: {totalSeconds2} Seconds, Speed: {speed2} MB/s ");
+                var totalSeconds = Math.Max(1, (int)(DateTime.Now - startTime).TotalSeconds);
+                var speed = ((float)item.BytesPerSecond / 1000000).ToString("0.00");
+                Console.WriteLine($"Downloaded: {item.CurrentSize} / { item.TotalSize }, Timer: {totalSeconds} Seconds, Speed: {speed} MB/s ");
                 Thread.Sleep(1000);
             }
 
-            var size = dm.GetItem().TotalSize;
-            var totalSeconds = Math.Max(1, (int)(DateTime.Now - startTime).TotalSeconds);
-            var bytePerSeconds = (int)(size / totalSeconds);
-            var speed = ((float)bytePerSeconds / 1000000).ToString("0.00");
-            
-            Console.WriteLine();
-            Console.WriteLine($"** DM has finished. Size: {size}, Timer: {totalSeconds} Seconds, Speed: {speed} MB/s");
-
+            ReportSpeed(startTime, dm.GetItem().TotalSize);
         }
     }
 }

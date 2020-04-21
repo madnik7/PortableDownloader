@@ -37,6 +37,7 @@ namespace PortableDownloader
         private CancellationTokenSource _cancellationTokenSource;
         private readonly ConcurrentQueue<SpeedData> _speedMonitor = new ConcurrentQueue<SpeedData>();
         private DownloadState _state = DownloadState.None;
+        private int SpeedThresholdSeconds { get; } = 20;
 
         public bool IsStarted
         {
@@ -51,8 +52,8 @@ namespace PortableDownloader
         {
             get
             {
+                var threshold = SpeedThresholdSeconds;
                 var curTotalSeconds = TimeSpan.FromTicks(DateTime.Now.Ticks).TotalSeconds;
-                var threshold = 5;
                 return _speedMonitor.Where(x => x.Seconds > curTotalSeconds - threshold).Sum(x => x.Count) / threshold;
             }
         }
@@ -213,7 +214,7 @@ namespace PortableDownloader
 
                 // create new download range if previous size is different
                 if (DownloadedRanges.Length == 0 || DownloadedRanges.Sum(x => x.To - x.From + 1) != TotalSize)
-                    DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported ? PartSize : TotalSize);
+                    DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported && MaxPartCount >= 2  ? PartSize : TotalSize);
 
                 // finish initializing
                 State = DownloadState.Initialized;
@@ -364,7 +365,7 @@ namespace PortableDownloader
                 throw new InvalidOperationException("downloadRange.From should be zero when resuming not supported!");
 
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
-            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationToken).ConfigureAwait(false);
 
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 
@@ -456,7 +457,7 @@ namespace PortableDownloader
             }
 
             // remove old data
-            while (_speedMonitor.TryPeek(out SpeedData speedData) && speedData.Seconds < curTotalSeconds - 5)
+            while (_speedMonitor.TryPeek(out SpeedData speedData) && speedData.Seconds < curTotalSeconds - SpeedThresholdSeconds)
                 _speedMonitor.TryDequeue(out _);
         }
 

@@ -8,7 +8,7 @@ namespace PortableDownloader
         public Uri Uri { get; set; }
         public Stream Stream { get; set; }
         public DownloadRange[] DownloadedRanges { get; set; }
-        public int MaxPartCount { get; set; } = 4;
+        public int MaxPartCount { get; set; } = 1;
         public long PartSize { get; set; } = 4000 * 1000;
         public int MaxRetryCount { get; set; }
         public bool AutoDisposeStream { get; set; } = true;

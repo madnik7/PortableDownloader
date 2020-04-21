@@ -134,6 +134,7 @@ namespace PortableDownloader
                 DownloadedRanges = DownloadedRanges,
                 Uri = Uri
             };
+
             var json = JsonSerializer.Serialize(data);
             _storage.WriteAllText(_downloadingInfoPath, json);
         }
