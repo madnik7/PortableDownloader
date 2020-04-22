@@ -365,7 +365,7 @@ namespace PortableDownloader
                 throw new InvalidOperationException("downloadRange.From should be zero when resuming not supported!");
 
             using var requestMessage = new HttpRequestMessage(HttpMethod.Get, Uri);
-            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseContentRead, cancellationToken).ConfigureAwait(false);
+            var response = await httpClient.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
 
             using var stream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
 

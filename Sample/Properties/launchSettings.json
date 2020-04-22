@@ -2,7 +2,7 @@
   "profiles": {
     "Sample": {
       "commandName": "Project",
-      "commandLineArgs": "https://az792536.vo.msecnd.net/vms/VMBuild_20190311/VirtualBox/MSEdge/MSEdge.Win10.VirtualBox.zip c:\\t\\test\\t /MaxPartCount 1 /PartSize 100000000 /WriteBufferSize2 1024 /t1"
+      "commandLineArgs": "https://s3.amazonaws.com/bpacks/bbcpersian/bbcpersian.bpack c:\\t\\test\\t /MaxPartCount 1 /PartSize 100000000"
     }
   }
 }

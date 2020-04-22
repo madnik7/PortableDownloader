@@ -52,8 +52,11 @@ namespace PortableDownloader.Sample
                 lastKey = item;
             }
 
+            if (args.Contains("/t"))
+                DownloadByWebClient(url, path);
+
             // download by portable
-            DownloadByPortableDownloader(url, path, dmOptions, true);
+            DownloadByPortableDownloader(url, path, dmOptions, continueAfterRestart);
 
         }
 
@@ -90,7 +93,11 @@ namespace PortableDownloader.Sample
 
             //delete old download
             if (!continueAfterRestart)
+            {
+                if (storage.StreamExists(streamPath))
+                    storage.DeleteStream(streamPath);
                 dm.Cancel(streamPath);
+            }
 
             dm.Add(streamPath, new Uri(url));
             while (!dm.IsIdle)
