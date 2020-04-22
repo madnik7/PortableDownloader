@@ -281,7 +281,7 @@ namespace PortableDownloader
                 // change state
                 lock (_monitorState)
                 {
-                    _startTask.SetResult(null);
+                    _startTask?.SetResult(null);
                     _startTask = null;
                 }
             }

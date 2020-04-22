@@ -100,6 +100,9 @@ namespace PortableDownloader.Sample
             }
 
             dm.Add(streamPath, new Uri(url));
+            dm.Add(streamPath + "a", new Uri(url));
+            dm.Add(streamPath + "2", new Uri("https://s3.amazonaws.com/bpacks/bbcpersian/bbcpersian.jpg"));
+            dm.Add(streamPath + "3", new Uri("https://s3.amazonaws.com/bpacks/bbcpersian/bpack_meta.json"));
             while (!dm.IsIdle)
             {
                 var item = dm.GetItem();
