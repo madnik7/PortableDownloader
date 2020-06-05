@@ -25,6 +25,9 @@ namespace PortableDownloader
             Start
         }
 
+        public delegate void DownloadStateChangedEventHandler(object sender, DownloadStateChangedEventArgs e);
+        public event DownloadStateChangedEventHandler DownloadStateChanged;
+
         public bool AllowResuming { get; private set; }
         public int MaxPartCount { get; private set; }
         public long PartSize { get; private set; }
@@ -199,6 +202,9 @@ namespace PortableDownloader
         {
             CheckQueue();
             Save();
+
+            // raise event
+            DownloadStateChanged?.Invoke(this, new DownloadStateChangedEventArgs((DownloadController)sender));
         }
 
         public void Cancel(string path = null)

@@ -9,14 +9,15 @@ namespace PortableDownloader
     {
         class DownloadData
         {
+            public double DownloadDuration { get; set; }
             public Uri Uri { get; set; }
             public DownloadRange[] DownloadedRanges { get; set; }
         }
 
         private readonly string _downloadingPath;
         private readonly string _downloadingInfoPath;
-        private readonly Storage _storage;
-        public string DownloadPath { get; }
+        public Storage LocalStorage { get; }
+        public string LocalPath { get; }
 
         public static DownloadController Create(DownloadControllerOptions options)
         {
@@ -47,19 +48,20 @@ namespace PortableDownloader
                 WriteBufferSize = options.WriteBufferSize,
             })
         {
-            DownloadPath = options.DownloadPath;
+            LocalPath = options.DownloadPath;
             _downloadingInfoPath = options.DownloadingInfoPath;
             _downloadingPath = options.DownloadingPath;
-            _storage = options.Storage;
+            LocalStorage = options.Storage;
+            DownloadDuration = downloadData.DownloadDuration;
         }
 
         protected override Stream OpenStream()
         {
             // open or create stream
-            var stream = _storage.EntryExists(_downloadingPath)
-                ? _storage.OpenStream(_downloadingPath, StreamMode.Open, StreamAccess.ReadWrite, StreamShare.Read)
-                : _storage.CreateStream(_downloadingPath, StreamShare.None);
-            if (!_storage.EntryExists(_downloadingPath))
+            var stream = LocalStorage.EntryExists(_downloadingPath)
+                ? LocalStorage.OpenStream(_downloadingPath, StreamMode.Open, StreamAccess.ReadWrite, StreamShare.Read)
+                : LocalStorage.CreateStream(_downloadingPath, StreamShare.None);
+            if (!LocalStorage.EntryExists(_downloadingPath))
                 return stream;
 
             return stream;
@@ -86,8 +88,8 @@ namespace PortableDownloader
             //rename the temp downloading file
             try
             {
-                if (_storage.StreamExists(DownloadPath))
-                    _storage.DeleteStream(DownloadPath);
+                if (LocalStorage.StreamExists(LocalPath))
+                    LocalStorage.DeleteStream(LocalPath);
             }
             catch { }
 
@@ -95,7 +97,7 @@ namespace PortableDownloader
             try
             {
                 Save();
-                _storage.Rename(_downloadingPath, Path.GetFileNameWithoutExtension(_downloadingPath));
+                LocalStorage.Rename(_downloadingPath, Path.GetFileNameWithoutExtension(_downloadingPath));
             }
             catch (Exception ex)
             {
@@ -105,7 +107,7 @@ namespace PortableDownloader
             //remove info file
             try
             {
-                _storage.DeleteStream(_downloadingInfoPath);
+                LocalStorage.DeleteStream(_downloadingInfoPath);
             }
             catch { }
         }
@@ -132,11 +134,12 @@ namespace PortableDownloader
             var data = new DownloadData()
             {
                 DownloadedRanges = DownloadedRanges,
-                Uri = Uri
+                Uri = Uri,
+                DownloadDuration = DownloadDuration
             };
 
             var json = JsonSerializer.Serialize(data);
-            _storage.WriteAllText(_downloadingInfoPath, json);
+            LocalStorage.WriteAllText(_downloadingInfoPath, json);
         }
     }
 }

@@ -31,6 +31,7 @@ namespace PortableDownloader
         public event EventHandler DataReceived;
         public event EventHandler RangeDownloaded;
         public event EventHandler DownloadStateChanged;
+        public double DownloadDuration { get; protected set; }
 
         private readonly object _monitor = new object();
         private Stream _stream;
@@ -214,7 +215,7 @@ namespace PortableDownloader
 
                 // create new download range if previous size is different
                 if (DownloadedRanges.Length == 0 || DownloadedRanges.Sum(x => x.To - x.From + 1) != TotalSize)
-                    DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported && MaxPartCount >= 2  ? PartSize : TotalSize);
+                    DownloadedRanges = BuildDownloadRanges(TotalSize, IsResumingSupported && MaxPartCount >= 2 ? PartSize : TotalSize);
 
                 // finish initializing
                 State = DownloadState.Initialized;
@@ -241,16 +242,19 @@ namespace PortableDownloader
             if (State == DownloadState.Stopping)
                 await Stop().ConfigureAwait(false);
 
+            lock (_monitorState)
+            {
+                if (IsStarted || State == DownloadState.Downloading || State == DownloadState.Finished)
+                    return;
+
+                _startTask = new TaskCompletionSource<object>();
+            }
+
+
+            DateTime dateTime = DateTime.Now;
+
             try
             {
-                lock (_monitorState)
-                {
-                    if (IsStarted || State == DownloadState.Downloading || State == DownloadState.Finished)
-                        return;
-
-                    _startTask = new TaskCompletionSource<object>();
-                }
-
                 // init
                 await Init().ConfigureAwait(false);
 
@@ -265,8 +269,10 @@ namespace PortableDownloader
                 // close stream before setting the state
                 FinalizeStream();
 
-                // finish it
+                // pre finish job
                 OnBeforeFinish();
+
+                // mark as finish
                 State = DownloadState.Finished;
             }
             catch (Exception ex)
@@ -276,6 +282,8 @@ namespace PortableDownloader
             }
             finally
             {
+                DownloadDuration += (DateTime.Now - dateTime).TotalSeconds;
+
                 FinalizeStream();
 
                 // change state
