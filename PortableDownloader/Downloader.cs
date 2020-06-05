@@ -208,7 +208,7 @@ namespace PortableDownloader
                 if (response.StatusCode != HttpStatusCode.OK)
                     throw new Exception($"StatusCode is {response.StatusCode}");
 
-                IsResumingSupported = AllowResuming ? response.Headers.AcceptRanges.Contains("bytes") : false;
+                IsResumingSupported = AllowResuming && response.Headers.AcceptRanges.Contains("bytes");
                 TotalSize = response.Content.Headers.ContentLength ?? 0;
                 if (response.Content.Headers.ContentLength == null)
                     throw new Exception($"Could not retrieve the stream size: {Uri}");
@@ -266,6 +266,10 @@ namespace PortableDownloader
 
                 await StartImpl().ConfigureAwait(false);
 
+                // save time before any notification
+                DownloadDuration += (DateTime.Now - dateTime).TotalSeconds;
+                dateTime = DateTime.Now; //prevent add again if an exception occured
+
                 // close stream before setting the state
                 FinalizeStream();
 
@@ -277,12 +281,12 @@ namespace PortableDownloader
             }
             catch (Exception ex)
             {
+                DownloadDuration += (DateTime.Now - dateTime).TotalSeconds;
                 SetLastError(ex);
                 throw;
             }
             finally
             {
-                DownloadDuration += (DateTime.Now - dateTime).TotalSeconds;
 
                 FinalizeStream();
 
