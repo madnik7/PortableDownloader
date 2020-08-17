@@ -45,7 +45,7 @@ namespace PortableDownloader
             get
             {
                 lock (_monitorState)
-                    return _startTask != null;
+                    return _startTask != null && State!=DownloadState.Finished;
             }
         }
 

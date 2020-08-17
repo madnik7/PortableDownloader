@@ -25,8 +25,7 @@ namespace PortableDownloader
             Start
         }
 
-        public delegate void DownloadStateChangedEventHandler(object sender, DownloadStateChangedEventArgs e);
-        public event DownloadStateChangedEventHandler DownloadStateChanged;
+        public event EventHandler<DownloadStateChangedEventArgs> DownloadStateChanged;
 
         public bool AllowResuming { get; private set; }
         public int MaxPartCount { get; private set; }
@@ -227,6 +226,7 @@ namespace PortableDownloader
                 if (_storage.EntryExists(downloadingName)) _storage.DeleteStream(downloadingName);
                 if (_storage.EntryExists(downloadingInfoName)) _storage.DeleteStream(downloadingInfoName);
             }
+            Save();
         }
 
         private void UpdateItems()
@@ -313,10 +313,9 @@ namespace PortableDownloader
 
             // get all items in path
             foreach (var item in GetItems(path))
-            {
                 AddImpl(item.Path, item.RemoteUri, StartMode.Start);
-                Save();
-            }
+            
+            Save();
         }
 
         public Task Stop(string path = null)
@@ -360,7 +359,6 @@ namespace PortableDownloader
 
             if (disposing)
             {
-                Save();
                 foreach (var item in _downloadControllers)
                     item.Value.Dispose();
             }

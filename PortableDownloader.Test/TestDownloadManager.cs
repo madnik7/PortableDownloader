@@ -159,7 +159,7 @@ namespace PortableDownloader.Test
                 Assert.AreEqual(2, dm.Items.Count(x => x.State == DownloadState.Stopped), "invalid number of not started items");
 
                 dm.Start("folder1/file2");
-                Assert.AreEqual(1, dm.Items.Count(x => x.IsStarted), "invalid number of started items");
+                Assert.AreEqual(1, dm.Items.Count(x => x.IsStarted ), "invalid number of started items");
                 Assert.AreEqual(2, dm.Items.Count(x => x.IsIdle), "invalid number of ilde items");
             }
 
