@@ -2,7 +2,7 @@ Portable Downloader Manager
 ==========
 
 A library for resuming and multi-part/multi-threaded downloads in .NET written in C#
-Advanced Portable Download Manager with simple usage.
+Advanced Portable Download Manager with easy usage.
 
 The library based on .NET Standard 2.0
 
