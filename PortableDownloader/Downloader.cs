@@ -12,7 +12,6 @@ using System.Threading.Tasks;
 
 namespace PortableDownloader
 {
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1063:Implement IDisposable Correctly", Justification = "<Pending>")]
     public class Downloader : IDisposable
     {
         private class SpeedData
@@ -318,7 +317,6 @@ namespace PortableDownloader
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         private async Task StartImpl()
         {
             _cancellationTokenSource = new CancellationTokenSource();
