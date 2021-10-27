@@ -66,10 +66,10 @@ namespace PortableDownloader
             return stream;
         }
         private int _totalRead;
-        protected override void OnDataReceived(int readedCount)
+        protected override void OnDataReceived(int readCount)
         {
-            base.OnDataReceived(readedCount);
-            _totalRead += readedCount;
+            base.OnDataReceived(readCount);
+            _totalRead += readCount;
             if (_totalRead > 1000000)
             {
                 Save();

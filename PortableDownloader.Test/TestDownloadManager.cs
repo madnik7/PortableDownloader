@@ -261,7 +261,7 @@ namespace PortableDownloader.Test
         {
             using var mem1 = new MemoryStream(500000);
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
-            using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, MaxPartCount = 2, PartSize = 10000, AutoDisposeStream = false }); ;
+            using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, MaxPartCount = 20, PartSize = 100000, AutoDisposeStream = false }); ;
 
             Assert.AreEqual(DownloadState.None, downloader.State, "state should be none before start");
 
