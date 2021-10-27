@@ -65,6 +65,7 @@ namespace PortableDownloader
         public int MaxRetyCount { get; set; }
         public string Host { get; }
         public Uri Referrer { get; }
+        public string UserAgent { get; set; }
         public HttpMessageHandler ClientHandler { get; }
         private readonly int _writeBufferSize;
         public Downloader(DownloaderOptions options)
@@ -81,6 +82,7 @@ namespace PortableDownloader
             PartSize = options.PartSize;
             Host = options.Host;
             Referrer = options.Referrer;
+            UserAgent = options.UserAgent;
             State = options.IsStopped ? DownloadState.Stopped : DownloadState.None;
             AutoDisposeStream = options.AutoDisposeStream;
             AllowResuming = options.AllowResuming;
@@ -181,6 +183,12 @@ namespace PortableDownloader
                 GetStream();
                 // download the header
                 using var httpClient = ClientHandler == null ? new HttpClient() : new HttpClient(ClientHandler);
+                if (!string.IsNullOrEmpty(Host))
+                    httpClient.DefaultRequestHeaders.Host = Host;
+                if (Referrer != null)
+                    httpClient.DefaultRequestHeaders.Referrer = Referrer;
+                if (!string.IsNullOrEmpty(UserAgent))
+                    httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(UserAgent);
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Head, Uri);
                 var response = await httpClient.SendAsync(requestMessage, _cancellationTokenSource.Token).ConfigureAwait(false);
                 if (response.StatusCode != HttpStatusCode.OK)
@@ -319,6 +327,8 @@ namespace PortableDownloader
                 httpClient.DefaultRequestHeaders.Host = Host;
             if (Referrer != null)
                 httpClient.DefaultRequestHeaders.Referrer = Referrer;
+            if (!string.IsNullOrEmpty(UserAgent))
+                httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(UserAgent);
             // get part from server and copy it to a memory stream
             if (IsResumingSupported)
                 httpClient.DefaultRequestHeaders.Range = new RangeHeaderValue(downloadRange.From + downloadRange.CurrentOffset, downloadRange.To);

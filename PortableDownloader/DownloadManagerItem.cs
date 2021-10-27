@@ -18,5 +18,6 @@ namespace PortableDownloader
         public HttpMessageHandler ClientHandler { get; set; }
         public Uri Referrer { get; set; }
         public string Host { get; set; }
+        public string UserAgent { get; set; }
     }
 }

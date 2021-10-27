@@ -16,6 +16,7 @@ namespace PortableDownloader
         public bool AllowResuming { get; set; } = true;
         public bool IsStopped { get; set; }
         public int WriteBufferSize { get; set; } = 0xFFFF;
+        internal string UserAgent { get; set; }
         internal string Host { get; set; }
         internal Uri Referrer { get; set; }
         internal HttpMessageHandler ClientHandler { get; set; }

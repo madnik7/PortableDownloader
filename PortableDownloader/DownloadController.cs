@@ -45,6 +45,7 @@ namespace PortableDownloader
                 WriteBufferSize = options.WriteBufferSize,
                 Host = options.Host,
                 Referrer = options.Referrer,
+                UserAgent = options.UserAgent,
                 ClientHandler = options.ClientHandler
             })
         {

@@ -18,6 +18,7 @@ namespace PortableDownloader
         public bool IsStopped { get; set; }
         public string DownloadingInfoExtension { get; set; } = ".downloading_info";
         public string DownloadingExtension { get; set; } = ".downloading";
+        internal string UserAgent { get; set; }
         internal Uri Referrer { get; set; }
         internal string Host { get; set; }
         internal HttpMessageHandler ClientHandler { get; set; }

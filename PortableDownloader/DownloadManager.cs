@@ -79,7 +79,7 @@ namespace PortableDownloader
                     var startMode = StartMode.None;
                     if (item.IsStarted) startMode = StartMode.AddToQueue;
                     if (item.State == DownloadState.Downloading) startMode = StartMode.Start;
-                    AddImpl(item.Path, item.RemoteUri, startMode, item.Host, item.Referrer, item.ClientHandler);
+                    AddImpl(item.Path, item.RemoteUri, startMode, item.Host, item.UserAgent, item.Referrer, item.ClientHandler);
                 }
             }
             catch { }
@@ -97,7 +97,7 @@ namespace PortableDownloader
         }
         public void Add(DownloadOption option)
         {
-            AddImpl(option.Path, option.RemoteUri, option.Mode, option.Host, option.Referrer, option.MessageHandler);
+            AddImpl(option.Path, option.RemoteUri, option.Mode, option.Host, option.UserAgent, option.Referrer, option.MessageHandler);
             CheckQueue();
             Save();
         }
@@ -109,14 +109,14 @@ namespace PortableDownloader
         }
         [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "<Pending>")]
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
-        private void AddImpl(string path, Uri remoteUri, StartMode startMode, string host = "", Uri referrer = null, HttpMessageHandler clientHandler = null)
+        private void AddImpl(string path, Uri remoteUri, StartMode startMode, string host = "", string userAgent = "", Uri referrer = null, HttpMessageHandler clientHandler = null)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));
             path = ValidatePath(path);
             //add to list if it is not already exists
             if (!_items.TryGetValue(path, out DownloadManagerItem newItem))
             {
-                newItem = new DownloadManagerItem { Path = path, RemoteUri = remoteUri, Host = host, Referrer = referrer, ClientHandler = clientHandler };
+                newItem = new DownloadManagerItem { Path = path, RemoteUri = remoteUri, Host = host, UserAgent = userAgent, Referrer = referrer, ClientHandler = clientHandler };
                 _items.TryAdd(path, newItem);
             }
             // restart finished item if it does not exists
@@ -130,7 +130,7 @@ namespace PortableDownloader
             // start
             try
             {
-                var downloadController = GetOrCreateDownloadController(path, remoteUri, clientHandler, host, referrer, resume: true, isStopped: startMode == StartMode.None);
+                var downloadController = GetOrCreateDownloadController(path, remoteUri, clientHandler, host, userAgent, referrer, resume: true, isStopped: startMode == StartMode.None);
                 if (startMode == StartMode.Start)
                     downloadController.Start().GetAwaiter();
                 // restart if it is stopped or in error state
@@ -147,7 +147,7 @@ namespace PortableDownloader
             }
         }
         private DownloadController GetOrCreateDownloadController(string path, Uri remoteUri, HttpMessageHandler clientHandler,
-           string host, Uri referrer, bool resume, bool isStopped)
+           string host, string userAgent, Uri referrer, bool resume, bool isStopped)
         {
             //delete if not in resume mode
             if (!resume)
@@ -175,6 +175,7 @@ namespace PortableDownloader
                 WriteBufferSize = WriteBufferSize,
                 Host = host,
                 Referrer = referrer,
+                UserAgent = userAgent,
                 ClientHandler = clientHandler
             });
             newDownloadController.DownloadStateChanged += DownloadController_DownloadStateChanged;
