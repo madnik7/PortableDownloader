@@ -1,5 +1,6 @@
 ﻿using PortableStorage;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.Json;
 
@@ -13,19 +14,16 @@ namespace PortableDownloader
             public Uri Uri { get; set; }
             public DownloadRange[] DownloadedRanges { get; set; }
         }
-
         private readonly string _downloadingPath;
         private readonly string _downloadingInfoPath;
         public Storage LocalStorage { get; }
         public string LocalPath { get; }
-
         public static DownloadController Create(DownloadControllerOptions options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
             if (options.DownloadPath == null) throw new ArgumentNullException(nameof(options.DownloadPath));
             options.DownloadingPath ??= options.DownloadPath + options.DownloadingExtension;
             options.DownloadingInfoPath ??= options.DownloadPath + options.DownloadingInfoExtension;
-
             var downloadData = Load(options);
             options.Uri ??= downloadData.Uri ?? throw new ArgumentNullException(nameof(options.Uri));
             var ret = new DownloadController(options, downloadData);
@@ -33,7 +31,6 @@ namespace PortableDownloader
                 ret.Init().GetAwaiter();
             return ret;
         }
-
         private DownloadController(DownloadControllerOptions options, DownloadData downloadData)
             : base(new DownloaderOptions()
             {
@@ -46,6 +43,9 @@ namespace PortableDownloader
                 MaxRetryCount = options.MaxRetryCount,
                 PartSize = options.PartSize,
                 WriteBufferSize = options.WriteBufferSize,
+                Host = options.Host,
+                Referrer = options.Referrer,
+                ClientHandler = options.ClientHandler
             })
         {
             LocalPath = options.DownloadPath;
@@ -54,7 +54,6 @@ namespace PortableDownloader
             LocalStorage = options.Storage;
             DownloadDuration = downloadData.DownloadDuration;
         }
-
         protected override Stream OpenStream()
         {
             // open or create stream
@@ -63,10 +62,8 @@ namespace PortableDownloader
                 : LocalStorage.CreateStream(_downloadingPath, StreamShare.None);
             if (!LocalStorage.EntryExists(_downloadingPath))
                 return stream;
-
             return stream;
         }
-
         private int _totalRead;
         protected override void OnDataReceived(int readedCount)
         {
@@ -78,13 +75,10 @@ namespace PortableDownloader
                 _totalRead = 0;
             }
         }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         protected override void OnBeforeFinish()
         {
-
             base.OnBeforeFinish();
-
             //rename the temp downloading file
             try
             {
@@ -92,7 +86,6 @@ namespace PortableDownloader
                     LocalStorage.DeleteStream(LocalPath);
             }
             catch { }
-
             // rename stream
             try
             {
@@ -103,7 +96,6 @@ namespace PortableDownloader
             {
                 SetLastError(ex);
             }
-
             //remove info file
             try
             {
@@ -111,8 +103,7 @@ namespace PortableDownloader
             }
             catch { }
         }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
+        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         private static DownloadData Load(DownloadControllerOptions options)
         {
             try
@@ -125,19 +116,15 @@ namespace PortableDownloader
                 return new DownloadData();
             }
         }
-
-
         private void Save()
         {
             Flush();
-
             var data = new DownloadData()
             {
                 DownloadedRanges = DownloadedRanges,
                 Uri = Uri,
                 DownloadDuration = DownloadDuration
             };
-
             var json = JsonSerializer.Serialize(data);
             LocalStorage.WriteAllText(_downloadingInfoPath, json);
         }

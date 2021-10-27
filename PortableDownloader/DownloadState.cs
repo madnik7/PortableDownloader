@@ -3,7 +3,6 @@
 namespace PortableDownloader
 {
     [JsonConverter(typeof(JsonStringEnumConverter))]
-
     public enum DownloadState
     {
         None,

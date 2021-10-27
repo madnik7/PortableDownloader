@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.Http;
 
 namespace PortableDownloader
 {
@@ -14,7 +15,8 @@ namespace PortableDownloader
         public bool IsIdle => !IsStarted && Downloader.IsIdleState(State);
         public Uri RemoteUri { get; set; }
         public string ErrorMessage { get; set; }
-
-        
+        public HttpMessageHandler ClientHandler { get; set; }
+        public Uri Referrer { get; set; }
+        public string Host { get; set; }
     }
 }
