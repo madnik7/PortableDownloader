@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Net.Http;
 
 namespace PortableDownloader
 {
@@ -15,5 +16,6 @@ namespace PortableDownloader
         public bool AllowResuming { get; set; } = true;
         public bool IsStopped { get; set; }
         public int WriteBufferSize { get; set; } = 0xFFFF;
+        public HttpMessageHandler HttpMessage { get; set; }
     }
 }

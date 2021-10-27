@@ -59,6 +59,7 @@ namespace PortableDownloader
         }
 
         public Uri Uri { get; }
+        public HttpMessageHandler HttpMessage { get;  }
         public DownloadRange[] DownloadedRanges { get; private set; }
         public long TotalSize { get; private set; }
         public Exception LastException { get; private set; }
@@ -79,6 +80,7 @@ namespace PortableDownloader
 
             Uri = options.Uri;
             _stream = options.Stream;
+            HttpMessage = options.HttpMessage;
             _writeBufferSize = options.WriteBufferSize;
             DownloadedRanges = options.DownloadedRanges ?? Array.Empty<DownloadRange>();
             MaxPartCount = options.MaxPartCount;
@@ -201,7 +203,7 @@ namespace PortableDownloader
                 GetStream();
 
                 // download the header
-                using var httpClient = new HttpClient();
+                using var httpClient = HttpMessage != null ? new HttpClient(HttpMessage) : new HttpClient();
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Head, Uri);
                 var response = await httpClient.SendAsync(requestMessage, _cancellationTokenSource.Token).ConfigureAwait(false);
                 if (response.StatusCode != HttpStatusCode.OK)
@@ -366,7 +368,7 @@ namespace PortableDownloader
 
         private async Task DownloadPart(DownloadRange downloadRange, CancellationToken cancellationToken)
         {
-            using var httpClient = new HttpClient();
+            using var httpClient = HttpMessage != null ? new HttpClient(HttpMessage) : new HttpClient();
 
             // get part from server and copy it to a memory stream
             if (IsResumingSupported)
@@ -504,9 +506,9 @@ namespace PortableDownloader
                     _cancellationTokenSource?.Dispose();
                     if (AutoDisposeStream)
                         _stream?.Dispose();
+                    HttpMessage.Dispose();
                 }
             }
-
             _disposedValue = true;
         }
 
