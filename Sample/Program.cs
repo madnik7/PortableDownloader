@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace PortableDownloader.Sample
 {
@@ -48,6 +45,8 @@ namespace PortableDownloader.Sample
                 else if (item.Equals("/DisableResuming", StringComparison.InvariantCultureIgnoreCase))
                     dmOptions.AllowResuming = false;
 
+                else if (item.Equals("/ContinueAfterRestart", StringComparison.InvariantCultureIgnoreCase))
+                    continueAfterRestart = true;
 
                 lastKey = item;
             }
@@ -86,7 +85,7 @@ namespace PortableDownloader.Sample
 
             Console.WriteLine($"Download using PortableDownloader. \nMaxPartCount: {options.MaxPartCount}, \nPartSize: {options.PartSize}, \nAllowResuming: {options.AllowResuming}, \nWriteBufferSize: {options.WriteBufferSize}");
             Console.WriteLine();
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(Path.GetDirectoryName(path), true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(Path.GetDirectoryName(path), true);
             options.Storage = storage;
             using var dm = new DownloadManager(options);
             var streamPath = Path.GetFileName(path);
@@ -100,9 +99,6 @@ namespace PortableDownloader.Sample
             }
 
             dm.Add(streamPath, new Uri(url));
-            dm.Add(streamPath + "a", new Uri(url));
-            dm.Add(streamPath + "2", new Uri("https://s3.amazonaws.com/bpacks/bbcpersian/bbcpersian.jpg"));
-            dm.Add(streamPath + "3", new Uri("https://s3.amazonaws.com/bpacks/bbcpersian/bpack_meta.json"));
             while (!dm.IsIdle)
             {
                 var item = dm.GetItem();
