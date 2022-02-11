@@ -6,7 +6,7 @@ namespace PortableDownloader
 {
     public class DownloadControllerOptions
     {
-        private static readonly DownloaderOptions DefaultOptions = new DownloaderOptions();
+        private static readonly DownloaderOptions DefaultOptions = new();
         public int MaxPartCount { get; set; } = DefaultOptions.MaxPartCount;
         public long PartSize { get; set; } = DefaultOptions.PartSize;
         public int MaxRetryCount { get; set; } = DefaultOptions.MaxRetryCount;

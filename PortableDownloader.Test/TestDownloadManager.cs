@@ -3,10 +3,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using PortableDownloader;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Diagnostics;
@@ -40,7 +37,7 @@ namespace PortableDownloader.Test
                 Stream = File.OpenWrite(@"c:\temp\file1.zip")
             });
 
-            downloader.Start().ContinueWith(x =>
+            downloader.Start().ContinueWith(_ =>
             {
                 Console.WriteLine("Single File Downloaded!");
             });
@@ -51,7 +48,7 @@ namespace PortableDownloader.Test
 
         public static void ForReadME2()
         {
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true);
             using var downloadController = DownloadController.Create(new DownloadControllerOptions()
             {
                 Uri = new Uri("https://abcd.com/file1.zip"),
@@ -59,7 +56,7 @@ namespace PortableDownloader.Test
                 DownloadPath = "file1"
             });
 
-            downloadController.Start().ContinueWith(x =>
+            downloadController.Start().ContinueWith(_ =>
             {
                 Console.WriteLine("Single File Downloaded!");
             });
@@ -72,7 +69,7 @@ namespace PortableDownloader.Test
         public static void ForReadME3()
         {
             // Create a portable storage
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(@"c:\temp", true);
 
             // Create a portable download manager
             var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 3 };
@@ -96,7 +93,7 @@ namespace PortableDownloader.Test
         {
 
             var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true);
 
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 100 };
@@ -160,7 +157,7 @@ namespace PortableDownloader.Test
 
                 dm.Start("folder1/file2");
                 Assert.AreEqual(1, dm.Items.Count(x => x.IsStarted ), "invalid number of started items");
-                Assert.AreEqual(2, dm.Items.Count(x => x.IsIdle), "invalid number of ilde items");
+                Assert.AreEqual(2, dm.Items.Count(x => x.IsIdle), "invalid number of idle items");
             }
 
             // restore downloads after restart
@@ -176,7 +173,7 @@ namespace PortableDownloader.Test
         public void Test_Foo()
         {
             var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true);
 
             var uri = new Uri("https://az792536.vo.msecnd.net/vms/VMBuild_20190311/VirtualBox/MSEdge/MSEdge.Win10.VirtualBox.zip");
             var dmOptions = new DownloadManagerOptions()
@@ -204,18 +201,18 @@ namespace PortableDownloader.Test
         }
 
         [TestMethod]
-        public void Test_Download_must_start_if_finished_file_doesnot_exist()
+        public void Test_Download_must_start_if_finished_file_does_not_exist()
         {
             var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true);
 
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             var dmOptions = new DownloadManagerOptions() { Storage = storage };
             using var dm = new DownloadManager(dmOptions);
 
             dm.Add("file1", uri, false);
-            dm.Add("file1", uri, true);
-            Assert.IsFalse(dm.IsIdle, "dowload is not started after second add");
+            dm.Add("file1", uri);
+            Assert.IsFalse(dm.IsIdle, "download is not started after second add");
 
             dm.Add("file1", uri);
             WaitForAllDownloads(dm);
@@ -237,7 +234,7 @@ namespace PortableDownloader.Test
         [TestMethod]
         public async Task Test_Downloader_Stop()
         {
-            using var mem1 = new MemoryStream();
+            await using var mem1 = new MemoryStream();
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false });
             Assert.AreEqual(DownloadState.None, downloader.State, "state should be none before start");
@@ -259,9 +256,9 @@ namespace PortableDownloader.Test
         [TestMethod]
         public async Task Test_Downloader_Start()
         {
-            using var mem1 = new MemoryStream(500000);
+            await using var mem1 = new MemoryStream(500000);
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
-            using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, MaxPartCount = 20, PartSize = 100000, AutoDisposeStream = false }); ;
+            using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, MaxPartCount = 20, PartSize = 100000, AutoDisposeStream = false });
 
             Assert.AreEqual(DownloadState.None, downloader.State, "state should be none before start");
 
@@ -269,12 +266,12 @@ namespace PortableDownloader.Test
             var downloaderTask = downloader.Start();
 
             // start downloading by simple http client download
-            using var mem2 = new MemoryStream(500000);
+            await using var mem2 = new MemoryStream(500000);
             using var httpClient = new HttpClient();
-            var httpClientTask = httpClient.GetStreamAsync(uri);
-            (await httpClientTask).CopyTo(mem2);
+            var stream = await httpClient.GetStreamAsync(uri);
+            var simpleCopyTask = stream.CopyToAsync(mem2);
 
-            await Task.WhenAll(downloaderTask, httpClientTask);
+            await Task.WhenAll(downloaderTask, simpleCopyTask);
             Assert.AreEqual(DownloadState.Finished, downloader.State, "state should be finished after start");
 
             // compare two stream
@@ -287,7 +284,7 @@ namespace PortableDownloader.Test
         [TestMethod]
         public async Task Test_Downloader_Start_NoResume()
         {
-            using var mem1 = new MemoryStream();
+            await using var mem1 = new MemoryStream();
             var uri = new Uri("https://raw.githubusercontent.com/madnik7/PortableDownloader/master/README.md");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem1, Uri = uri, PartSize = 10000, AutoDisposeStream = false, AllowResuming = false });
 
@@ -295,12 +292,12 @@ namespace PortableDownloader.Test
             var downloaderTask = downloader.Start();
 
             // start downloading by simple http client download
-            using var mem2 = new MemoryStream();
+            await using var mem2 = new MemoryStream();
             using var httpClient = new HttpClient();
-            var httpClientTask = httpClient.GetStreamAsync(uri);
-            (await httpClientTask).CopyTo(mem2);
+            var stream = await httpClient.GetStreamAsync(uri);
+            var copyTask = stream.CopyToAsync(mem2);
 
-            await Task.WhenAll(downloaderTask, httpClientTask);
+            await Task.WhenAll(downloaderTask, copyTask);
             Assert.IsFalse(downloader.IsResumingSupported, "the test link should not support resuming");
             Assert.AreEqual(DownloadState.Finished, downloader.State, "state should be finished after start");
 
@@ -315,7 +312,7 @@ namespace PortableDownloader.Test
         [TestMethod]
         public async Task Test_Downloader_Error()
         {
-            using var mem = new MemoryStream(1000000);
+            await using var mem = new MemoryStream(1000000);
             var uri = new Uri("https://download.sysinternals.com/files/not-exists-4252336.zip");
             using var downloader = new Downloader(new DownloaderOptions() { Stream = mem, Uri = uri, PartSize = 10000, AutoDisposeStream = false });
 
@@ -324,7 +321,10 @@ namespace PortableDownloader.Test
             {
                 await downloader.Start();
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
 
             // start downloading by simple download
             Assert.AreEqual(DownloadState.Error, downloader.State, "state should be error after start");
@@ -336,7 +336,7 @@ namespace PortableDownloader.Test
         {
 
             var path = Path.Combine(TempPath, Guid.NewGuid().ToString());
-            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true, null);
+            using var storage = PortableStorage.Providers.FileStorgeProvider.CreateStorage(path, true);
 
             var uri = new Uri("https://download.sysinternals.com/files/SysinternalsSuite-ARM64.zip");
             var dmOptions = new DownloadManagerOptions() { Storage = storage, MaxOfSimultaneousDownloads = 100 };
@@ -360,9 +360,9 @@ namespace PortableDownloader.Test
                 Assert.AreEqual(3, dm.Items.Count(x => x.State == DownloadState.Finished), "invalid number of item with finish state");
             }
 
-            Assert.IsTrue(storage.EntryExists($"folder1/file1"), "item has not been downloaded!");
-            Assert.IsTrue(storage.EntryExists($"folder1/file2"), "item has not been downloaded!");
-            Assert.IsTrue(storage.EntryExists($"folder1/file3"), "item has not been downloaded!");
+            Assert.IsTrue(storage.EntryExists("folder1/file1"), "item has not been downloaded!");
+            Assert.IsTrue(storage.EntryExists("folder1/file2"), "item has not been downloaded!");
+            Assert.IsTrue(storage.EntryExists("folder1/file3"), "item has not been downloaded!");
         }
 
 

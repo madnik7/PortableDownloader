@@ -1,8 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace PortableDownloader.Sample
 {
@@ -52,7 +53,7 @@ namespace PortableDownloader.Sample
             }
 
             if (args.Contains("/t"))
-                DownloadByWebClient(url, path);
+                _ = DownloadByHttpClient(url, path);
 
             // download by portable
             DownloadByPortableDownloader(url, path, dmOptions, continueAfterRestart);
@@ -68,14 +69,17 @@ namespace PortableDownloader.Sample
             Console.WriteLine();
         }
 
-        static void DownloadByWebClient(string url, string path)
+        static async Task DownloadByHttpClient(string url, string path)
         {
+            if (path == null) throw new ArgumentNullException(nameof(path));
             var startTime = DateTime.Now;
             if (File.Exists(path)) File.Delete(path);
 
-            Console.WriteLine("Download using webClient: ");
-            var webClient = new WebClient();
-            webClient.DownloadFile(url, path);
+            Console.WriteLine("Download using HttpClient: ");
+            var client = new HttpClient();
+            await using var stream = await client.GetStreamAsync(url);
+            await using var fs = new FileStream(path, FileMode.CreateNew);
+            await stream.CopyToAsync(fs);
             ReportSpeed(startTime, new FileInfo(path).Length);
         }
 

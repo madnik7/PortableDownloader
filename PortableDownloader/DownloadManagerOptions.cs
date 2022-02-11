@@ -4,7 +4,7 @@ namespace PortableDownloader
 {
     public class DownloadManagerOptions
     {
-        private static readonly DownloadControllerOptions DefaultOptions = new DownloadControllerOptions();
+        private static readonly DownloadControllerOptions DefaultOptions = new();
         public Storage Storage { get; set; }
         public string DataPath { get; set; } = ".downloadlist.json";
         public int MaxOfSimultaneousDownloads { get; set; } = 3;

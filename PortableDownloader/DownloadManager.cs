@@ -25,16 +25,16 @@ namespace PortableDownloader
             Start
         }
         public event EventHandler<DownloadStateChangedEventArgs> DownloadStateChanged;
-        public bool AllowResuming { get; private set; }
-        public int MaxPartCount { get; private set; }
-        public long PartSize { get; private set; }
-        public int MaxRetryCount { get; private set; }
-        public int WriteBufferSize { get; private set; }
-        private readonly object _monitor = new object();
+        public bool AllowResuming { get; }
+        public int MaxPartCount { get; }
+        public long PartSize { get; }
+        public int MaxRetryCount { get; }
+        public int WriteBufferSize { get; }
+        private readonly object _monitor = new();
         private readonly Storage _storage;
         private readonly string _dataPath;
-        private readonly ConcurrentDictionary<string, DownloadController> _downloadControllers = new ConcurrentDictionary<string, DownloadController>();
-        private readonly ConcurrentDictionary<string, DownloadManagerItem> _items = new ConcurrentDictionary<string, DownloadManagerItem>();
+        private readonly ConcurrentDictionary<string, DownloadController> _downloadControllers = new();
+        private readonly ConcurrentDictionary<string, DownloadManagerItem> _items = new();
         public string DownloadingExtension { get; }
         public string DownloadingInfoExtension { get; }
         private int _maxOfSimultaneousDownloads;
@@ -52,8 +52,7 @@ namespace PortableDownloader
         public DownloadManager(DownloadManagerOptions options)
         {
             if (options == null) throw new ArgumentNullException(nameof(options));
-            if (options.Storage == null) throw new ArgumentNullException(nameof(options.Storage));
-            _storage = options.Storage;
+            _storage = options.Storage ?? throw new ArgumentNullException(nameof(options.Storage));
             _dataPath = options.DataPath;
             _maxOfSimultaneousDownloads = options.MaxOfSimultaneousDownloads;
             DownloadingExtension = options.DownloadingExtension;
@@ -66,13 +65,13 @@ namespace PortableDownloader
             if (options.RestoreLastList)
                 Load(options.DataPath);
         }
-        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
+        
         private void Load(string dataPath)
         {
             // load last data
             try
             {
-                var ret = JsonSerializer.Deserialize<DownloadManagerData>(_storage.ReadAllText(dataPath));
+                var ret = JsonSerializer.Deserialize<DownloadManagerData>(_storage.ReadAllText(dataPath)) ?? throw new Exception($"Could not read {dataPath}");
                 foreach (var item in ret.Items)
                 {
                     _items.TryAdd(item.Path, item);
@@ -82,7 +81,10 @@ namespace PortableDownloader
                     AddImpl(item.Path, item.RemoteUri, startMode, item.Host, item.UserAgent, item.Referrer, item.ClientHandler);
                 }
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
         private void Save()
         {
@@ -193,7 +195,7 @@ namespace PortableDownloader
         {
             foreach (var item in GetItems(path))
             {
-                // remove conroller
+                // remove controller
                 if (_downloadControllers.TryGetValue(item.Path, out DownloadController downloadController))
                 {
                     downloadController.Dispose();
@@ -232,7 +234,7 @@ namespace PortableDownloader
             for (var i = 0; i < waitingItems.Length && i < MaxOfSimultaneousDownloads - startedItems.Length; i++)
                 Start(waitingItems[i].Path);
         }
-        public DownloadManagerItem[] Items => GetItems(null);
+        public DownloadManagerItem[] Items => GetItems();
         public DownloadManagerItem[] GetItems(string path = null)
         {
             path = ValidatePath(path);
@@ -240,7 +242,7 @@ namespace PortableDownloader
             // return all for root request
             if (path == Storage.SeparatorChar.ToString(CultureInfo.InvariantCulture))
                 return _items.Select(x => x.Value).ToArray();
-            // return only itelsef and items belong to sub storages
+            // return only itself and items belong to sub storage(s)
             return _items.Where(x => (x.Value.Path + "/").IndexOf(path + "/", StringComparison.InvariantCultureIgnoreCase) == 0)
                 .Select(x => x.Value)
                 .ToArray();
@@ -259,7 +261,7 @@ namespace PortableDownloader
                 State = items.Any(x => x.State != items[0].State) ? DownloadState.None : items[0].State,
                 Path = path,
                 ErrorMessage = items.FirstOrDefault(x => x.State == DownloadState.Error)?.ErrorMessage,
-                RemoteUri = items.Length == 1 ? items.FirstOrDefault().RemoteUri : null,
+                RemoteUri = items.Length == 1 ? items.Single().RemoteUri : null,
                 IsStarted = items.Any(x => x.IsStarted)
             };
             if (items.Any(x => !x.IsIdle && x.State != DownloadState.Stopping))
@@ -306,7 +308,7 @@ namespace PortableDownloader
             var ext = Path.GetExtension(path);
             return ext == DownloadingExtension || ext == DownloadingInfoExtension;
         }
-        private bool _disposedValue = false; // To detect redundant calls
+        private bool _disposedValue; // To detect redundant calls
         protected virtual void Dispose(bool disposing)
         {
             if (_disposedValue)

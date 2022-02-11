@@ -1,6 +1,5 @@
 ﻿using PortableStorage;
 using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text.Json;
 
@@ -8,7 +7,7 @@ namespace PortableDownloader
 {
     public class DownloadController : Downloader
     {
-        class DownloadData
+        private class DownloadData
         {
             public double DownloadDuration { get; set; }
             public Uri Uri { get; set; }
@@ -76,7 +75,6 @@ namespace PortableDownloader
                 _totalRead = 0;
             }
         }
-        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
         protected override void OnBeforeFinish()
         {
             base.OnBeforeFinish();
@@ -86,7 +84,11 @@ namespace PortableDownloader
                 if (LocalStorage.StreamExists(LocalPath))
                     LocalStorage.DeleteStream(LocalPath);
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
+
             // rename stream
             try
             {
@@ -102,9 +104,12 @@ namespace PortableDownloader
             {
                 LocalStorage.DeleteStream(_downloadingInfoPath);
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
-        [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "<Pending>")]
+        
         private static DownloadData Load(DownloadControllerOptions options)
         {
             try

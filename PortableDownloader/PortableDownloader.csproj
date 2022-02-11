@@ -8,6 +8,7 @@
     <RootNamespace>PortableDownloader</RootNamespace>
     <AssemblyName>PortableDownloader</AssemblyName>
     <RunAnalyzersDuringBuild>true</RunAnalyzersDuringBuild>
+    <LangVersion>10.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

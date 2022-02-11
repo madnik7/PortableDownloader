@@ -29,14 +29,15 @@ namespace PortableDownloader
         public event EventHandler RangeDownloaded;
         public event EventHandler DownloadStateChanged;
         public double DownloadDuration { get; protected set; }
-        private readonly object _monitor = new object();
+        private readonly object _monitor = new();
         private Stream _stream;
         private CancellationTokenSource _cancellationTokenSource;
-        private readonly ConcurrentQueue<SpeedData> _speedMonitor = new ConcurrentQueue<SpeedData>();
+        private readonly ConcurrentQueue<SpeedData> _speedMonitor = new();
         private bool _disposedValue; // To detect redundant calls
         private DownloadState _state = DownloadState.None;
 
-        private int SpeedThresholdSeconds { get; } = 20;
+        private int SpeedThresholdSeconds => 20;
+
         public bool IsStarted
         {
             get
@@ -89,9 +90,9 @@ namespace PortableDownloader
             AutoDisposeStream = options.AutoDisposeStream;
             AllowResuming = options.AllowResuming;
             ClientHandler = options.ClientHandler;
-            TotalSize = options.DownloadedRanges != null && options.DownloadedRanges.Length > 0 ? DownloadedRanges.Sum(x => x.To - x.From + 1) : 0;
+            TotalSize = options.DownloadedRanges is {Length: > 0} ? DownloadedRanges.Sum(x => x.To - x.From + 1) : 0;
         }
-        private readonly object _monitorState = new object();
+        private readonly object _monitorState = new();
         public DownloadState State
         {
             get
@@ -327,9 +328,6 @@ namespace PortableDownloader
                  }
              }, MaxPartCount, cancellationToken).ConfigureAwait(false);
             
-            // release _cancellationTokenSource
-            _cancellationTokenSource.Dispose();
-            _cancellationTokenSource = null;
             if (exRoot != null)
                 throw exRoot;
         }
@@ -410,7 +408,7 @@ namespace PortableDownloader
                                     // break if canceled
                                     if (cancellationToken.IsCancellationRequested)
                                         break;
-                                    await body(partition.Current).ContinueWith(t =>
+                                    await body(partition.Current).ContinueWith(_ =>
                                     {
                                         //observe exceptions
                                     }, TaskScheduler.Current).ConfigureAwait(true);
