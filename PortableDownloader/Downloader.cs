@@ -195,13 +195,22 @@ namespace PortableDownloader
                 if (!string.IsNullOrEmpty(UserAgent)) httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(UserAgent);
                 
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Head, Uri);
-                requestMessage.Version = HttpVersion.Version20;
+                requestMessage.Version = HttpVersion.Version11;
                 var response = await httpClient.SendAsync(requestMessage, _cancellationTokenSource.Token).ConfigureAwait(false);
                 if (response.StatusCode != HttpStatusCode.OK)
                     throw new Exception($"StatusCode is {response.StatusCode}");
 
                 IsResumingSupported = AllowResuming && response.Headers.AcceptRanges.Contains("bytes");
                 TotalSize = response.Content.Headers.ContentLength ?? 0;
+
+                // try to find total size for chunked stream 
+                if (TotalSize == 0)
+                {
+                    var cl = response.Headers.FirstOrDefault(x => x.Key.Contains("Content-Length", StringComparison.OrdinalIgnoreCase));
+                    if (cl.Value != null && cl.Value.Any() && long.TryParse(cl.Value.First(), out var totalSize))
+                        TotalSize = totalSize;
+                }
+
                 if (response.Content.Headers.ContentLength == null)
                     throw new Exception($"Could not retrieve the stream size: {Uri}");
 
