@@ -195,7 +195,7 @@ namespace PortableDownloader
                 if (!string.IsNullOrEmpty(UserAgent)) httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(UserAgent);
                 
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Head, Uri);
-                requestMessage.Version = HttpVersion.Version11;
+                requestMessage.Version = HttpVersion.Version20;
                 var response = await httpClient.SendAsync(requestMessage, _cancellationTokenSource.Token).ConfigureAwait(false);
                 if (response.StatusCode != HttpStatusCode.OK)
                     throw new Exception($"StatusCode is {response.StatusCode}");
@@ -211,7 +211,7 @@ namespace PortableDownloader
                         TotalSize = totalSize;
                 }
 
-                if (response.Content.Headers.ContentLength == null)
+                if (response.Content.Headers.ContentLength == null && TotalSize == 0)
                     throw new Exception($"Could not retrieve the stream size: {Uri}");
 
                 // create new download range if previous size is different
