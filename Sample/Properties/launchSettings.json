@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "Sample": {
-      "commandName": "Project",
-      "commandLineArgs": "http://info.cern.ch c:\\t\\test\\t /MaxPartCount 1 /PartSize 100000000"
-    }
-  }
-}
