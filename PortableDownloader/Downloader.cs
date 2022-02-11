@@ -188,12 +188,13 @@ namespace PortableDownloader
 
                 // download the header
                 using var httpClient = ClientHandler == null ? new HttpClient() : new HttpClient(ClientHandler);
-                
+
                 if (!string.IsNullOrEmpty(Host)) httpClient.DefaultRequestHeaders.Host = Host;
                 if (Referrer != null) httpClient.DefaultRequestHeaders.Referrer = Referrer;
                 if (!string.IsNullOrEmpty(UserAgent)) httpClient.DefaultRequestHeaders.UserAgent.TryParseAdd(UserAgent);
                 
                 using var requestMessage = new HttpRequestMessage(HttpMethod.Head, Uri);
+                requestMessage.Version = HttpVersion.Version20;
                 var response = await httpClient.SendAsync(requestMessage, _cancellationTokenSource.Token).ConfigureAwait(false);
                 if (response.StatusCode != HttpStatusCode.OK)
                     throw new Exception($"StatusCode is {response.StatusCode}");
